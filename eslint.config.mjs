@@ -59,7 +59,7 @@ const eslintConfig = defineConfig([
       
       "newline-before-return": "error",
       
-      "linebreak-style": ["error", "unix"],
+      "linebreak-style": "off",
       
       "no-multiple-empty-lines": ["error", { max: 1, maxEOF: 1 }],
       
