@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Pokémon - PokéNext',
+  title: 'PokeNext',
   description: 'Explore o mundo Pokémon',
 }
 
