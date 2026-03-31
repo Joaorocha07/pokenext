@@ -111,3 +111,17 @@ export interface PokemonListResponse {
   previous: string | null
   results: PokemonListItem[]
 }
+
+export interface PokemonSlim {
+  id: number
+  name: string
+  types: { type: { name: string } }[]
+  stats: { base_stat: number; stat: { name: string } }[]
+  sprites: {
+    other?: {
+      'official-artwork'?: {
+        front_default?: string | null
+      }
+    }
+  }
+}

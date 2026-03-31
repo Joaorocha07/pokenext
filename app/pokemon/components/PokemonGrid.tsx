@@ -1,10 +1,10 @@
 
 import { PokemonCard } from './PokemonCard'
 
-import type { Pokemon } from '@/services/pokeapi/types'
+import type { PokemonSlim } from '@/services/pokeapi/types'
 
 interface PokemonGridProps {
-  pokemons: Pokemon[]
+  pokemons: PokemonSlim[]
 }
 
 export function PokemonGrid({ pokemons }: PokemonGridProps) {

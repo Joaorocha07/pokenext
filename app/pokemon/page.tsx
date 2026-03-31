@@ -1,9 +1,11 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Header } from './components/Header'
 
-import { Pokemon } from '@/services/pokeapi/types'
+import { PokemonSlim } from '@/services/pokeapi/types'
+
+import { Pagination } from './components/Pagination'
 
 import { EmptyState } from './components/EmptyState'
 
@@ -11,93 +13,155 @@ import { PokemonGrid } from './components/PokemonGrid'
 
 import { LoadingSpinner } from './components/LoadingSpinner'
 
-import { pokemonService } from '@/services/pokeapi/pokemonService'
+import { pokemonTeste } from '@/services/pokeapi/pokemonTeste'
+
+const ITEMS_PER_PAGE = 20
 
 export default function PokemonPage() {
-  const [isLoading, setIsLoading] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
-  const [isSearching, setIsSearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [pokemons, setPokemons] = useState<Pokemon[]>([])
+  const [isLoadingAll, setIsLoadingAll] = useState(false)
+  const [isLoadingPage, setIsLoadingPage] = useState(false)
+  const [allPokemons, setAllPokemons] = useState<PokemonSlim[]>([])
 
   useEffect(() => {
-    async function loadInitialPokemons() {
-      setIsLoading(true)
-      setError(null)
-      
-      try {
-        const list = await pokemonService.getList(20, 0)
-        const details = await pokemonService.getMany(
-          list.results.map((p) => p.name)
-        )
+    async function loadAllPokemons() {
+      if (pokemonTeste.hasValidCache()) {
+        const cached = pokemonTeste.getFromCache()
+        
+        if (cached) {
+          setAllPokemons(cached)
 
-        setPokemons(details)
+          return
+        }
+      }
+
+      setIsLoadingAll(true)
+      setError(null)
+
+      try {
+        const all = await pokemonTeste.getAll()
+
+        setAllPokemons(all)
       } catch (err) {
         setError('Não foi possível carregar os Pokémon')
         console.error(err)
       } finally {
-        setIsLoading(false)
+        setIsLoadingAll(false)
       }
     }
 
-    loadInitialPokemons()
+    loadAllPokemons()
+  }, [])
+
+  const filteredPokemons = useMemo(() => {
+    if (!searchQuery) return allPokemons
+    
+    const query = searchQuery.toLowerCase()
+    
+    return allPokemons.filter(p => 
+      p.name.toLowerCase().includes(query) ||
+      p.id.toString() === query
+    )
+  }, [allPokemons, searchQuery])
+
+  const currentPokemons = useMemo(() => {
+    return pokemonTeste.paginate(
+      filteredPokemons, currentPage, ITEMS_PER_PAGE
+    )
+  }, [filteredPokemons, currentPage])
+
+  const totalPages = useMemo(() => {
+    return pokemonTeste.getTotalPages(filteredPokemons.length, ITEMS_PER_PAGE)
+  }, [filteredPokemons])
+
+  const handlePageChange = useCallback((page: number) => {
+    setIsLoadingPage(true)
+    setCurrentPage(page)
+    
+    setTimeout(() => {
+      setIsLoadingPage(false)
+      // Scroll suave para topo
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }, 150)
   }, [])
 
   const handleSearch = useCallback((query: string) => {
-    setIsSearching(true)
     setSearchQuery(query)
-    setError(null)
-
-    pokemonService
-      .getByIdOrName(query)
-      .then((pokemon) => {
-        setPokemons([pokemon])
-      })
-      .catch(() => {
-        setPokemons([])
-        setError('not-found')
-      })
-      .finally(() => {
-        setIsSearching(false)
-      })
+    setCurrentPage(1)
   }, [])
 
   function renderContent() {
-    if (isLoading || isSearching) {
-      return <LoadingSpinner />
-    }
-
-    if (error === 'not-found') {
-      return <EmptyState type="not-found" />
+    if (isLoadingAll) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20">
+          <LoadingSpinner size="lg" />
+          <p className="mt-4 text-zinc-500 dark:text-zinc-400">
+            Carregando Pokémon... 
+            (isso pode levar alguns segundos na primeira vez)
+          </p>
+          <div className="w-64 h-2 bg-zinc-200 dark:bg-zinc-800 rounded-full mt-4 overflow-hidden">
+            <div className="h-full bg-yellow-400 animate-pulse w-1/2" />
+          </div>
+        </div>
+      )
     }
 
     if (error) {
       return <EmptyState type="error" message={error} />
     }
 
-    if (pokemons.length === 0) {
-      return <EmptyState type="no-results" />
+    if (filteredPokemons.length === 0) {
+      return <EmptyState type={searchQuery ? 'not-found' : 'no-results'} />
     }
 
-    return <PokemonGrid pokemons={pokemons} />
+    return (
+      <>
+        {isLoadingPage && (
+          <div className="flex justify-center py-4">
+            <LoadingSpinner size="sm" />
+          </div>
+        )}
+        
+        <PokemonGrid pokemons={currentPokemons} />
+        
+        {/* Paginação */}
+        {!searchQuery && totalPages > 1 && (
+          <Pagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
+        )}
+      </>
+    )
   }
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <Header 
-        onSearch={handleSearch} 
-        isLoading={isSearching} 
+        onSearch={handleSearch}
+        isLoading={isLoadingAll}
       />
       
       <main className="pt-4">
-        {/* Results count */}
-        {!isLoading && !isSearching && pokemons.length > 0 && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4">
+        {!isLoadingAll && filteredPokemons.length > 0 && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4 flex justify-between items-center">
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              {searchQuery
-                ? `Resultado para "${searchQuery}"`
-                : `Mostrando ${pokemons.length} Pokémon`}
+              {searchQuery ? (
+                `${filteredPokemons.length} resultado${filteredPokemons.length !== 1 ? 's' : ''} para "${searchQuery}"`
+              ) : (
+                `Página ${currentPage} de ${totalPages} • Mostrando ${currentPokemons.length} de ${filteredPokemons.length} Pokémon`
+              )}
             </p>
+            
+            {pokemonTeste.hasValidCache() && !searchQuery && (
+              <span className="text-xs text-green-500 flex items-center gap-1">
+                <span className="w-2 h-2 bg-green-500 rounded-full" />
+                Cache ativo
+              </span>
+            )}
           </div>
         )}
         

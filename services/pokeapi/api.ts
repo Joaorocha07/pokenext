@@ -4,14 +4,19 @@ export async function fetchApi<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
-  const url = `${BASE_URL}${endpoint}`
-  
+
+  const url = endpoint.startsWith('http') 
+    ? endpoint 
+    : `${BASE_URL}${endpoint}`
+
   const response = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
     },
     ...options,
   })
+
+  console.log(response)
 
   if (!response.ok) {
     throw new Error(
@@ -20,10 +25,4 @@ export async function fetchApi<T>(
   }
 
   return response.json() as Promise<T>
-}
-
-export function extractIdFromUrl(url: string): number {
-  const matches = url.match(/\/(\d+)\/?$/)
-  
-return matches ? parseInt(matches[1], 10) : 0
 }

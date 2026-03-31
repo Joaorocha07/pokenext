@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 import { ArrowRight, Star } from 'lucide-react'
 
-import type { Pokemon } from '@/services/pokeapi/types'
+import type { PokemonSlim } from '@/services/pokeapi/types'
 
 import { useFavorites } from '@/hooks/pokemon/useFavorites'
 
@@ -15,7 +15,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 
 interface PokemonCardProps {
-  pokemon: Pokemon
+  pokemon: PokemonSlim
   showRemoveButton?: boolean
   onRemove?: () => void
 }
