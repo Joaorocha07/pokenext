@@ -57,10 +57,12 @@ export function PokemonCard({
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    toggleFavorite(pokemon.id)
-    if (showRemoveButton && onRemove) {
-      onRemove()
-    }
+    
+    toggleFavorite(pokemon.id, (isNowFavorite) => {
+      if (showRemoveButton && onRemove && !isNowFavorite) {
+        onRemove()
+      }
+    })
   }
 
   return (

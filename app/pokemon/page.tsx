@@ -43,7 +43,6 @@ export default function PokemonPage() {
     loadInitialPokemons()
   }, [])
 
-  // Buscar Pokémon específico
   const handleSearch = useCallback((query: string) => {
     setIsSearching(true)
     setSearchQuery(query)
@@ -63,17 +62,10 @@ export default function PokemonPage() {
       })
   }, [])
 
-  console.log(error)
-
-  // Renderização condicional
   function renderContent() {
     if (isLoading || isSearching) {
       return <LoadingSpinner />
     }
-
-    console.log(error)
-
-    console.log(pokemons)
 
     if (error === 'not-found') {
       return <EmptyState type="not-found" />
