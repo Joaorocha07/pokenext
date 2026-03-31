@@ -1,8 +1,13 @@
 'use client'
+
 import { useState } from 'react'
 
 import { ArrowRight, Star } from 'lucide-react'
+
 import type { Pokemon } from '@/services/pokeapi/types'
+
+import { useFavorites } from '@/hooks/pokemon/useFavorites'
+
 import { pokemonService } from '@/services/pokeapi/pokemonService'
 
 import Link from 'next/link'
@@ -11,11 +16,17 @@ import Image from 'next/image'
 
 interface PokemonCardProps {
   pokemon: Pokemon
+  showRemoveButton?: boolean
+  onRemove?: () => void
 }
 
-export function PokemonCard({ pokemon }: PokemonCardProps) {
-  const [isFavorite, setIsFavorite] = useState(false)
+export function PokemonCard({ 
+  pokemon, showRemoveButton, onRemove 
+}: PokemonCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false)
+  const { isFavorite, toggleFavorite } = useFavorites()
+  
+  const favorite = isFavorite(pokemon.id)
 
   const mainType = pokemon.types[0]?.type.name || 'normal'
   
@@ -43,16 +54,25 @@ export function PokemonCard({ pokemon }: PokemonCardProps) {
 
   const bgColor = typeColors[mainType] || 'bg-zinc-400'
 
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    toggleFavorite(pokemon.id)
+    if (showRemoveButton && onRemove) {
+      onRemove()
+    }
+  }
+
   return (
     <div className="group relative bg-white dark:bg-zinc-900 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden border border-zinc-100 dark:border-zinc-800">
       {/* Favorite Button */}
       <button
-        onClick={() => setIsFavorite(!isFavorite)}
+        onClick={handleFavoriteClick}
         className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/90 dark:bg-zinc-800/90 shadow-md hover:scale-110 transition-transform"
       >
         <Star
           className={`w-5 h-5 transition-colors ${
-            isFavorite
+            favorite
               ? 'fill-yellow-400 text-yellow-400'
               : 'text-zinc-400 hover:text-yellow-400'
           }`}

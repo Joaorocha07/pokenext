@@ -1,17 +1,17 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import type { Pokemon } from '@/services/pokeapi/types'
 
-const STORAGE_KEY = 'pokenext-favorites'
+const FAVORITES_KEY = 'pokemon-favorites'
 
 export function useFavorites() {
-  const [favorites, setFavorites] = useState<Pokemon[]>([])
+  const [favorites, setFavorites] = useState<number[]>([])
   const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY)
+      const stored = localStorage.getItem(FAVORITES_KEY)
 
       if (stored) {
         setFavorites(JSON.parse(stored))
@@ -22,63 +22,40 @@ export function useFavorites() {
     setIsLoaded(true)
   }, [])
 
-  // Salvar no localStorage
   useEffect(() => {
     if (isLoaded) {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites))
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites))
       } catch (error) {
         console.error('Erro ao salvar favoritos:', error)
       }
     }
   }, [favorites, isLoaded])
 
-  const addFavorite = useCallback((pokemon: Pokemon) => {
+  const toggleFavorite = useCallback((pokemonId: number) => {
     setFavorites((prev) => {
-      if (prev.some((p) => p.id === pokemon.id)) return prev
+      if (prev.includes(pokemonId)) {
+        return prev.filter((id) => id !== pokemonId)
+      }
       
-return [...prev, pokemon]
-    })
-  }, [])
-
-  const removeFavorite = useCallback((pokemonId: number) => {
-    setFavorites((prev) => prev.filter((p) => p.id !== pokemonId))
+      return [...prev, pokemonId]}
+    )
   }, [])
 
   const isFavorite = useCallback((pokemonId: number) => {
-    return favorites.some((p) => p.id === pokemonId)
+    return favorites.includes(pokemonId)
   }, [favorites])
 
-  const toggleFavorite = useCallback((pokemon: Pokemon) => {
-    if (isFavorite(pokemon.id)) {
-      removeFavorite(pokemon.id)
-      
-return false
-    } else {
-      addFavorite(pokemon)
-      
-return true
-    }
-  }, [isFavorite, addFavorite, removeFavorite])
-
-  const searchFavorites = useCallback((query: string) => {
-    const lowerQuery = query.toLowerCase()
-    
-return favorites.filter(
-      (p) =>
-        p.name.toLowerCase().includes(lowerQuery) ||
-        p.types.some((t) => t.type.name.toLowerCase().includes(lowerQuery))
-    )
-  }, [favorites])
+  const removeFavorite = useCallback((pokemonId: number) => {
+    setFavorites((prev) => prev.filter((id) => id !== pokemonId))
+  }, [])
 
   return {
-    favorites,
     isLoaded,
-    addFavorite,
-    removeFavorite,
+    favorites,
+    favoritesCount: favorites.length,
     isFavorite,
-    toggleFavorite,
-    searchFavorites,
-    count: favorites.length,
+    removeFavorite,
+    toggleFavorite
   }
 }

@@ -1,7 +1,7 @@
-import { Frown, SearchX } from 'lucide-react'
+import { Frown, HeartCrack, SearchX, Star } from 'lucide-react'
 
 interface EmptyStateProps {
-  type: 'not-found' | 'no-results' | 'error'
+  type: 'not-found' | 'no-results' | 'error' | 'no-favorites' | 'not-favorite'
   message?: string
 }
 
@@ -24,6 +24,18 @@ export function EmptyState({ type, message }: EmptyStateProps) {
       title: 'Ops! Algo deu errado',
       description: message || 'Não foi possível carregar os Pokémon. Tente novamente mais tarde.',
       color: 'text-red-500',
+    },
+    'no-favorites': {
+      icon: Star,
+      title: 'Nenhum favorito ainda',
+      description: message || 'Clique na estrela nos cards para adicionar Pokémon aos seus favoritos.',
+      color: 'text-yellow-400',
+    },
+    'not-favorite': {
+      icon: HeartCrack,
+      title: 'Não é um favorito',
+      description: message || 'Este Pokémon não está na sua lista de favoritos.',
+      color: 'text-rose-400',
     },
   }
 

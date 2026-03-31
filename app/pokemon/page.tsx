@@ -44,30 +44,36 @@ export default function PokemonPage() {
   }, [])
 
   // Buscar Pokémon específico
-const handleSearch = useCallback((query: string) => {
-  setIsSearching(true)
-  setSearchQuery(query)
-  setError(null)
+  const handleSearch = useCallback((query: string) => {
+    setIsSearching(true)
+    setSearchQuery(query)
+    setError(null)
 
-  pokemonService
-    .getByIdOrName(query)
-    .then((pokemon) => {
-      setPokemons([pokemon])
-    })
-    .catch(() => {
-      setPokemons([])
-      setError('not-found')
-    })
-    .finally(() => {
-      setIsSearching(false)
-    })
-}, [])
+    pokemonService
+      .getByIdOrName(query)
+      .then((pokemon) => {
+        setPokemons([pokemon])
+      })
+      .catch(() => {
+        setPokemons([])
+        setError('not-found')
+      })
+      .finally(() => {
+        setIsSearching(false)
+      })
+  }, [])
+
+  console.log(error)
 
   // Renderização condicional
   function renderContent() {
     if (isLoading || isSearching) {
       return <LoadingSpinner />
     }
+
+    console.log(error)
+
+    console.log(pokemons)
 
     if (error === 'not-found') {
       return <EmptyState type="not-found" />
@@ -87,7 +93,6 @@ const handleSearch = useCallback((query: string) => {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <Header 
-        favoritesCount={1}
         onSearch={handleSearch} 
         isLoading={isSearching} 
       />
