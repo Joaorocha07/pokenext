@@ -3,13 +3,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Header } from './components/Header'
 
-import { PokemonSlim } from '@/services/pokeapi/types'
-
 import { Pagination } from './components/Pagination'
 
 import { EmptyState } from './components/EmptyState'
 
 import { PokemonGrid } from './components/PokemonGrid'
+
+import { PokemonSlim } from '@/services/pokeapi/types'
 
 import { LoadingSpinner } from './components/LoadingSpinner'
 
@@ -20,6 +20,7 @@ const ITEMS_PER_PAGE = 20
 export default function PokemonPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
+  const [loadProgress, setLoadProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [isLoadingAll, setIsLoadingAll] = useState(false)
   const [isLoadingPage, setIsLoadingPage] = useState(false)
@@ -29,7 +30,7 @@ export default function PokemonPage() {
     async function loadAllPokemons() {
       if (pokemonTeste.hasValidCache()) {
         const cached = pokemonTeste.getFromCache()
-        
+
         if (cached) {
           setAllPokemons(cached)
 
@@ -38,10 +39,13 @@ export default function PokemonPage() {
       }
 
       setIsLoadingAll(true)
+      setLoadProgress(0)
       setError(null)
 
       try {
-        const all = await pokemonTeste.getAll()
+        const all = await pokemonTeste.getAll((progress) => {
+          setLoadProgress(progress)
+        })
 
         setAllPokemons(all)
       } catch (err) {
@@ -57,9 +61,8 @@ export default function PokemonPage() {
 
   const filteredPokemons = useMemo(() => {
     if (!searchQuery) return allPokemons
-    
     const query = searchQuery.toLowerCase()
-    
+
     return allPokemons.filter(p => 
       p.name.toLowerCase().includes(query) ||
       p.id.toString() === query
@@ -67,9 +70,7 @@ export default function PokemonPage() {
   }, [allPokemons, searchQuery])
 
   const currentPokemons = useMemo(() => {
-    return pokemonTeste.paginate(
-      filteredPokemons, currentPage, ITEMS_PER_PAGE
-    )
+    return pokemonTeste.paginate(filteredPokemons, currentPage, ITEMS_PER_PAGE)
   }, [filteredPokemons, currentPage])
 
   const totalPages = useMemo(() => {
@@ -79,10 +80,8 @@ export default function PokemonPage() {
   const handlePageChange = useCallback((page: number) => {
     setIsLoadingPage(true)
     setCurrentPage(page)
-    
     setTimeout(() => {
       setIsLoadingPage(false)
-      // Scroll suave para topo
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }, 150)
   }, [])
@@ -95,16 +94,10 @@ export default function PokemonPage() {
   function renderContent() {
     if (isLoadingAll) {
       return (
-        <div className="flex flex-col items-center justify-center py-20">
-          <LoadingSpinner size="lg" />
-          <p className="mt-4 text-zinc-500 dark:text-zinc-400">
-            Carregando Pokémon... 
-            (isso pode levar alguns segundos na primeira vez)
-          </p>
-          <div className="w-64 h-2 bg-zinc-200 dark:bg-zinc-800 rounded-full mt-4 overflow-hidden">
-            <div className="h-full bg-yellow-400 animate-pulse w-1/2" />
-          </div>
-        </div>
+        <LoadingSpinner 
+          text="Carregando Pokémon... Isso pode levar alguns segundos na primeira vez! ⚡"
+          progress={loadProgress}
+        />
       )
     }
 
@@ -126,7 +119,6 @@ export default function PokemonPage() {
         
         <PokemonGrid pokemons={currentPokemons} />
         
-        {/* Paginação */}
         {!searchQuery && totalPages > 1 && (
           <Pagination 
             currentPage={currentPage}
@@ -140,10 +132,7 @@ export default function PokemonPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
-      <Header 
-        onSearch={handleSearch}
-        isLoading={isLoadingAll}
-      />
+      <Header onSearch={handleSearch} isLoading={isLoadingAll} />
       
       <main className="pt-4">
         {!isLoadingAll && filteredPokemons.length > 0 && (

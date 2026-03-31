@@ -67,7 +67,7 @@ export function PokemonCard({
 
   return (
     <div className="group relative bg-white dark:bg-zinc-900 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden border border-zinc-100 dark:border-zinc-800">
-      {/* Favorite Button */}
+
       <button
         onClick={handleFavoriteClick}
         className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/90 dark:bg-zinc-800/90 shadow-md hover:scale-110 transition-transform"
@@ -81,7 +81,6 @@ export function PokemonCard({
         />
       </button>
 
-      {/* Image Container */}
       <div className={`relative h-48 ${bgColor} bg-opacity-20 dark:bg-opacity-10`}>
         <div className="absolute inset-0 bg-linear-to-b from-transparent to-white/20 dark:to-black/20" />
         
@@ -102,19 +101,16 @@ export function PokemonCard({
           }`}
         />
         
-        {/* ID Badge */}
         <span className="absolute top-3 left-3 px-2 py-1 text-xs font-bold bg-black/10 dark:bg-white/10 rounded-full text-zinc-600 dark:text-zinc-300">
           #{String(pokemon.id).padStart(3, '0')}
         </span>
       </div>
 
-      {/* Content */}
       <div className="p-4">
         <h3 className="text-lg font-bold capitalize text-zinc-800 dark:text-white mb-2">
           {pokemon.name}
         </h3>
 
-        {/* Types */}
         <div className="flex flex-wrap gap-2 mb-4">
           {pokemon.types.map((type) => (
             <span
@@ -126,7 +122,6 @@ export function PokemonCard({
           ))}
         </div>
 
-        {/* Stats Preview */}
         <div className="grid grid-cols-3 gap-2 mb-4 text-center">
           <div className="p-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
             <p className="text-xs text-zinc-500 dark:text-zinc-400">HP</p>
@@ -148,7 +143,6 @@ export function PokemonCard({
           </div>
         </div>
 
-        {/* Detail Button */}
         <Link
           href={`/pokemon/${pokemon.name}`}
           className="flex items-center justify-center gap-2 w-full py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-medium hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors group/btn"

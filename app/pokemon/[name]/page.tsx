@@ -1,12 +1,17 @@
 import { notFound } from 'next/navigation'
 
+import { FavoriteButton } from './FavoriteButton'
+
+import type { Pokemon } from '@/services/pokeapi/types'
+
+import { pokemonService } from '@/services/pokeapi/pokemonService'
+
 import {
   ArrowLeft, 
   Heart,
   Ruler, 
   Shield, 
-  Sparkles, 
-  Star, 
+  Sparkles,  
   Sword, 
   Target,
   Weight,
@@ -14,16 +19,9 @@ import {
   Zap
 } from 'lucide-react'
 
-import type { Pokemon } from '@/services/pokeapi/types'
-import { pokemonService } from '@/services/pokeapi/pokemonService'
-
 import Link from 'next/link'
 
 import Image from 'next/image'
-
-// ==========================================
-// METADADOS DINÂMICOS
-// ==========================================
 
 export async function generateMetadata({ 
   params 
@@ -37,10 +35,6 @@ return {
     description: `Detalhes do Pokémon ${name}`,
   }
 }
-
-// ==========================================
-// CORES POR TIPO
-// ==========================================
 
 const typeColors: Record<string, { 
     bg: string; text: string; gradient: string 
@@ -137,10 +131,6 @@ const typeColors: Record<string, {
   },
 }
 
-// ==========================================
-// COMPONENTE PRINCIPAL
-// ==========================================
-
 export default async function PokemonDetailPage({ 
   params 
 }: { 
@@ -159,7 +149,6 @@ export default async function PokemonDetailPage({
   const mainType = pokemon.types[0]?.type.name || 'normal'
   const theme = typeColors[mainType] || typeColors.normal
 
-  // Stats organizados
   const stats = {
     hp: pokemon.stats.find((s) => s.stat.name === 'hp')?.base_stat || 0,
     attack: pokemon.stats.find((s) => s.stat.name === 'attack')?.base_stat || 0,
@@ -173,9 +162,7 @@ export default async function PokemonDetailPage({
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
-      {/* Header com gradiente do tipo */}
       <div className={`bg-linear-to-br ${theme.gradient} relative overflow-hidden`}>
-        {/* Padrão de fundo */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-10 left-10 w-32 h-32 border-4 border-white rounded-full" />
           <div className="absolute bottom-10 right-10 w-48 h-48 border-4 border-white rounded-full" />
@@ -183,7 +170,6 @@ export default async function PokemonDetailPage({
         </div>
 
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Botão voltar */}
           <Link
             href="/pokemon"
             className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white hover:bg-white/30 transition-colors mb-6"
@@ -193,7 +179,6 @@ export default async function PokemonDetailPage({
           </Link>
 
           <div className="grid md:grid-cols-2 gap-8 items-center">
-            {/* Imagem do Pokémon */}
             <div className="relative flex justify-center">
               <div className="relative w-72 h-72 sm:w-96 sm:h-96">
                 <Image
@@ -208,22 +193,18 @@ export default async function PokemonDetailPage({
               </div>
             </div>
 
-            {/* Informações básicas */}
             <div className="text-white">
               <div className="flex items-center gap-3 mb-2">
                 <span className="text-white/60 font-mono text-lg">
                   #{String(pokemon.id).padStart(3, '0')}
                 </span>
-                <button className="p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors">
-                  <Star className="w-5 h-5" />
-                </button>
+                <FavoriteButton pokemonId={pokemon.id} />
               </div>
 
               <h1 className="text-5xl sm:text-7xl font-bold capitalize mb-4">
                 {pokemon.name}
               </h1>
 
-              {/* Tipos */}
               <div className="flex flex-wrap gap-3 mb-6">
                 {pokemon.types.map((type) => (
                   <span
@@ -235,7 +216,6 @@ export default async function PokemonDetailPage({
                 ))}
               </div>
 
-              {/* Info rápida */}
               <div className="grid grid-cols-3 gap-4">
                 <InfoCard 
                   icon={<Weight className="w-5 h-5" />}
@@ -258,10 +238,8 @@ export default async function PokemonDetailPage({
         </div>
       </div>
 
-      {/* Conteúdo principal */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Stats */}
           <section className="bg-white dark:bg-zinc-900 rounded-3xl p-6 sm:p-8 shadow-lg">
             <h2 className="text-2xl font-bold text-zinc-800 dark:text-white mb-6 flex items-center gap-2">
               <Target className="w-6 h-6 text-red-500" />
@@ -285,7 +263,6 @@ export default async function PokemonDetailPage({
             </div>
           </section>
 
-          {/* Habilidades */}
           <section className="bg-white dark:bg-zinc-900 rounded-3xl p-6 sm:p-8 shadow-lg">
             <h2 className="text-2xl font-bold text-zinc-800 dark:text-white mb-6 flex items-center gap-2">
               <Sparkles className="w-6 h-6 text-purple-500" />
@@ -321,7 +298,6 @@ export default async function PokemonDetailPage({
               ))}
             </div>
 
-            {/* Movimentos (primeiros 6) */}
             <div className="mt-8">
               <h3 className="text-lg font-bold text-zinc-800 dark:text-white mb-4">
                 Principais Movimentos
@@ -343,10 +319,6 @@ export default async function PokemonDetailPage({
     </div>
   )
 }
-
-// ==========================================
-// COMPONENTES AUXILIARES
-// ==========================================
 
 function InfoCard({ 
   icon, 

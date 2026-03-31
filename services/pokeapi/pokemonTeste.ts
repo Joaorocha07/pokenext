@@ -80,33 +80,23 @@ export const pokemonTeste = {
     }
   },
 
-  async getAll(): Promise<PokemonSlim[]> {
-    // Tenta cache primeiro
+  async getAll(onProgress?: 
+    (_progress: number) => void): Promise<PokemonSlim[]> {
     if (this.hasValidCache()) {
       const cached = this.getFromCache()
 
-      if (cached) {
-        console.log('✅ Usando cache')
-
-        return cached
-      }
+      if (cached) return cached
     }
 
-    console.log('🌐 Buscando da API...')
-    
-    // Busca lista
     const list = await fetchApi<PokemonListResponse>(
       `${ENDPOINTS.pokemon}?limit=1000&offset=0`
     )
     
-    // Busca detalhes em lotes menores (20 em vez de 50)
-    const batchSize = 20
+    const batchSize = 50
     const allPokemons: PokemonSlim[] = []
     
     for (let i = 0; i < list.results.length; i += batchSize) {
       const batch = list.results.slice(i, i + batchSize)
-      
-      // Usa ID em vez de URL completa
       const promises = batch.map(p => {
         const id = extractIdFromUrl(p.url)
 
@@ -117,11 +107,14 @@ export const pokemonTeste = {
 
       allPokemons.push(...results.map(toSlim))
       
-      // ✅ Progresso opcional
-      console.log(`Carregados ${Math.min(i + batchSize, list.results.length)}/${list.results.length}`)
+      const progress = Math.min(
+        Math.round(((i + batchSize) / list.results.length) * 100),
+        100
+      )
+
+      onProgress?.(progress)
     }
 
-    // Salva versão slim
     this.saveToCache(allPokemons)
     
     return allPokemons

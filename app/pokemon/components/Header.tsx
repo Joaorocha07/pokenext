@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useRef, useState } from 'react'
 
 import { usePathname } from 'next/navigation'
 
-import { Heart, Search, Sparkles, X } from 'lucide-react'
+import { Heart, Search, X } from 'lucide-react'
 
 import type { PokemonSlim } from '@/services/pokeapi/types'
 
@@ -13,6 +13,8 @@ import { pokemonTeste } from '@/services/pokeapi/pokemonTeste'
 import Link from 'next/link'
 
 import Image from 'next/image'
+
+import LogoPokemon from '@/assets/logo-pokemon.png'
 
 interface HeaderProps {
   isLoading: boolean
@@ -118,13 +120,15 @@ export function Header({ onSearch, isLoading }: HeaderProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center h-16 gap-4">
           <Link href="/pokemon" className="flex items-center gap-2 shrink-0 group">
-            <div className="relative">
-              <div className="absolute inset-0 bg-yellow-400 rounded-full blur-sm animate-pulse group-hover:animate-none transition-all" />
-              <Sparkles className="relative w-8 h-8 text-yellow-500" />
+            <div className="relative w-36 h-12">
+              <Image
+                src={LogoPokemon}
+                alt="PokéNext"
+                fill
+                className="object-contain group-hover:scale-105 transition-transform"
+                priority
+              />
             </div>
-            <h1 className="text-xl font-bold bg-linear-to-r from-yellow-500 to-red-500 bg-clip-text text-transparent hidden sm:block">
-              PokéNext
-            </h1>
           </Link>
 
           <div className="flex-1 flex justify-center relative">
@@ -245,7 +249,7 @@ export function Header({ onSearch, isLoading }: HeaderProps) {
 
       <div className="border-t border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-10 gap-6 text-sm">
+          <div className="flex items-center h-14 gap-6 text-sm">
             <Link 
               href="/pokemon" 
               className={`flex items-center gap-2 transition-colors ${
@@ -257,7 +261,9 @@ export function Header({ onSearch, isLoading }: HeaderProps) {
               <span className="w-2 h-2 rounded-full bg-green-400" />
               Todos Pokémon
             </Link>
+            
             <div className="w-px h-4 bg-zinc-300 dark:bg-zinc-700" />
+            
             <Link 
               href="/favoritos" 
               className={`flex items-center gap-2 transition-colors ${
