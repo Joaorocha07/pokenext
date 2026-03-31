@@ -23,6 +23,7 @@ interface HeaderProps {
 
 export function Header({ onSearch, isLoading }: HeaderProps) {
   const pathname = usePathname()
+
   const [query, setQuery] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [suggestions, setSuggestions] = useState<PokemonSlim[]>([])
@@ -119,7 +120,16 @@ export function Header({ onSearch, isLoading }: HeaderProps) {
     <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-zinc-200 dark:bg-zinc-950/80 dark:border-zinc-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center h-16 gap-4">
-          <Link href="/pokemon" className="flex items-center gap-2 shrink-0 group">
+          <Link
+            href="/pokemon"
+            onClick={(e) => {
+              if (pathname === '/pokemon') {
+                e.preventDefault()
+                window.location.reload()
+              }
+            }}
+            className="flex items-center gap-2 shrink-0 group"
+          >
             <div className="relative w-36 h-12">
               <Image
                 src={LogoPokemon}
@@ -250,8 +260,14 @@ export function Header({ onSearch, isLoading }: HeaderProps) {
       <div className="border-t border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-14 gap-6 text-sm">
-            <Link 
-              href="/pokemon" 
+            <Link
+              href="/pokemon"
+              onClick={(e) => {
+                if (pathname === '/pokemon') {
+                  e.preventDefault()
+                  window.location.reload()
+                }
+              }}
               className={`flex items-center gap-2 transition-colors ${
                 pathname === '/pokemon' 
                   ? 'text-yellow-500 font-medium' 
