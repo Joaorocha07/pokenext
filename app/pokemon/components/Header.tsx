@@ -131,7 +131,7 @@ export function Header({ onSearch, isLoading }: HeaderProps) {
             </div>
           </Link>
 
-          <div className="flex-1 flex justify-center relative">
+          <div className="hidden md:flex flex-1 justify-center relative">
             <form onSubmit={handleSubmit} className="w-full max-w-md relative">
               <div className="relative group">
                 <input
