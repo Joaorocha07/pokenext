@@ -271,6 +271,7 @@ export default function BattlePage() {
             ability={ability}
             index={index}
             isSelected={selectedAbilityId === ability.id}
+            hasSelection={selectedAbilityId !== null}
             onSelect={() => useAbility(ability.id)}
           />
         ))}
@@ -281,10 +282,11 @@ export default function BattlePage() {
         <div className="space-y-4">
           <p className="text-center text-emerald-400 font-bold text-lg">Seu Pokémon</p>
           <BattleCard
-            pokemon={team.player[currentRound]}
-            isPlayer
-            showStats
-          />
+              pokemon={team.player[currentRound]}
+              isPlayer={true}
+              showStats={true}
+              showHp={true}
+            />
         </div>
         
         <div className="space-y-4">
@@ -292,7 +294,8 @@ export default function BattlePage() {
           <BattleCard
             pokemon={team.machine[currentRound]}
             isPlayer={false}
-            showStats={team.machine[currentRound].revealed.stats}
+            showStats={team.machine[currentRound].revealed?.stats}
+            showHp={true}
           />
         </div>
       </div>
@@ -337,6 +340,9 @@ export default function BattlePage() {
     
     const { playerWon, draw } = currentRoundStats
     
+    const playerPokemon = team.player[currentRound]
+    const machinePokemon = team.machine[currentRound]
+    
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
@@ -355,38 +361,70 @@ export default function BattlePage() {
           {draw ? '🤝 EMPATE!' : playerWon ? '🎉 VITÓRIA!' : '💔 DERROTA!'}
         </motion.div>
 
-        <div className="grid grid-cols-2 gap-6 max-w-2xl mx-auto">
+        <div className="grid grid-cols-2 gap-6 max-w-3xl mx-auto">
+          {/* Card do Jogador */}
           <motion.div
             initial={{ x: -50, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             className={`
-              p-6 rounded-2xl border-2
+              p-6 rounded-2xl border-2 flex flex-col items-center
               ${playerWon ? 'bg-emerald-500/20 border-emerald-500' : 'bg-zinc-800 border-zinc-700'}
             `}
           >
-            <p className="text-emerald-400 font-bold mb-2">{team.player[currentRound].name}</p>
+            {/* Imagem do Pokémon do Jogador */}
+            <motion.img
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: 'spring' }}
+              src={pokemonService.getImageUrl(playerPokemon.id)}
+              alt={playerPokemon.name}
+              className={`
+                w-32 h-32 object-contain mb-4 drop-shadow-2xl
+                ${playerPokemon.currentHp <= 0 ? 'grayscale opacity-60' : ''}
+              `}
+            />
+            
+            <p className="text-emerald-400 font-bold mb-2 capitalize text-lg">
+              {playerPokemon.name}
+            </p>
             <p className="text-4xl font-black text-white">
-              {team.player[currentRound].currentHp} HP
+              {playerPokemon.currentHp} HP
             </p>
             <p className="text-sm text-zinc-400 mt-2">
-              {team.player[currentRound].currentHp > 0 ? 'Sobreviveu!' : 'Desmaiou'}
+              {playerPokemon.currentHp > 0 ? 'Sobreviveu!' : 'Desmaiou'}
             </p>
           </motion.div>
           
+          {/* Card da Máquina */}
           <motion.div
             initial={{ x: 50, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             className={`
-              p-6 rounded-2xl border-2
+              p-6 rounded-2xl border-2 flex flex-col items-center
               ${!playerWon && !draw ? 'bg-red-500/20 border-red-500' : 'bg-zinc-800 border-zinc-700'}
             `}
           >
-            <p className="text-red-400 font-bold mb-2">{team.machine[currentRound].name}</p>
+            {/* Imagem do Pokémon da Máquina */}
+            <motion.img
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.3, type: 'spring' }}
+              src={pokemonService.getImageUrl(machinePokemon.id)}
+              alt={machinePokemon.name}
+              className={`
+                w-32 h-32 object-contain mb-4 drop-shadow-2xl
+                ${machinePokemon.currentHp <= 0 ? 'grayscale opacity-60' : ''}
+              `}
+            />
+            
+            <p className="text-red-400 font-bold mb-2 capitalize text-lg">
+              {machinePokemon.name}
+            </p>
             <p className="text-4xl font-black text-white">
-              {team.machine[currentRound].currentHp} HP
+              {machinePokemon.currentHp} HP
             </p>
             <p className="text-sm text-zinc-400 mt-2">
-              {team.machine[currentRound].currentHp > 0 ? 'Sobreviveu!' : 'Desmaiou'}
+              {machinePokemon.currentHp > 0 ? 'Sobreviveu!' : 'Desmaiou'}
             </p>
           </motion.div>
         </div>
