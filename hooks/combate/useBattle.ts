@@ -100,6 +100,10 @@ export function useBattle() {
   const [abilities, setAbilities] = useState<SecretAbility[]>([])
   const [team, setTeam] = useState<BattleTeam>({ player: [], machine: [] })
 
+  const [roundResults, setRoundResults] = useState<
+    ('player' | 'machine' | 'draw')[]
+  >([])
+
   const [selectedAbilityId, setSelectedAbilityId] = 
     useState<string | null>(null)
 
@@ -199,24 +203,62 @@ export function useBattle() {
     setSelectedAbilityId(abilityId)
     
     setTeam(prev => {
-      const newTeam = { ...prev }
-      const currentPlayerPoke = newTeam.player[currentRound]
-      const currentMachinePoke = newTeam.machine[currentRound]
+      const newPlayer = prev.player.map((pokemon, index) => {
+        if (index !== currentRound) return pokemon
 
-      if (ability.effect.type === 'buff') {
-        currentPlayerPoke.buffs[ability.effect.stat] += ability.effect.value
-      } else if (ability.effect.type === 'debuff') {
-        currentPlayerPoke.buffs[ability.effect.stat] -= ability.effect.value
-      } else if (ability.effect.type === 'reveal') {
-        if (ability.effect.target === 'type' || ability.effect.target === 'all') {
-          currentMachinePoke.revealed.type = true
+        if (ability.effect.type === 'buff') {
+          return {
+            ...pokemon,
+            buffs: {
+              ...pokemon.buffs,
+              [ability.effect.stat]: 
+                pokemon.buffs[ability.effect.stat] + ability.effect.value,
+            },
+          }
         }
-        if (ability.effect.target === 'stats' || ability.effect.target === 'all') {
-          currentMachinePoke.revealed.stats = true
+
+        if (ability.effect.type === 'debuff') {
+          return {
+            ...pokemon,
+            buffs: {
+              ...pokemon.buffs,
+              [ability.effect.stat]: 
+                pokemon.buffs[ability.effect.stat] - ability.effect.value,
+            },
+          }
         }
+
+        return pokemon
+      })
+
+      const newMachine = prev.machine.map((pokemon, index) => {
+        if (index !== currentRound) return pokemon
+
+        if (ability.effect.type === 'reveal') {
+          return {
+            ...pokemon,
+            revealed: {
+              type:
+                ability.effect.target === 'type' ||
+                ability.effect.target === 'all'
+                  ? true
+                  : pokemon.revealed.type,
+              stats:
+                ability.effect.target === 'stats' ||
+                ability.effect.target === 'all'
+                  ? true
+                  : pokemon.revealed.stats,
+            },
+          }
+        }
+
+        return pokemon
+      })
+
+      return {
+        player: newPlayer,
+        machine: newMachine,
       }
-
-      return newTeam
     })
 
     setAbilities(prev => prev.map(a => 
@@ -228,36 +270,72 @@ export function useBattle() {
   const executeBattle = useCallback(() => {
     const playerPoke = team.player[currentRound]
     const machinePoke = team.machine[currentRound]
-    
+
     if (!playerPoke || !machinePoke) return
 
     const playerResult = calculateDamage(playerPoke, machinePoke)
     const machineResult = calculateDamage(machinePoke, playerPoke)
-    
-    const playerDamage = playerResult.isCritical 
-      ? Math.floor(playerResult.damage * 1.5) 
+
+    const playerDamage = playerResult.isCritical
+      ? Math.floor(playerResult.damage * 1.5)
       : playerResult.damage
-    const machineDamage = machineResult.damage
 
-    setTeam(prev => {
-      const newTeam = { ...prev }
+    const machineDamage = machineResult.isCritical
+      ? Math.floor(machineResult.damage * 1.5)
+      : machineResult.damage
 
-      newTeam.machine[currentRound].currentHp = 
-        Math.max(0, machinePoke.currentHp - playerDamage)
-      newTeam.player[currentRound].currentHp = 
-        Math.max(0, playerPoke.currentHp - machineDamage)
+    const nextMachineHp = Math.max(0, machinePoke.currentHp - playerDamage)
+    const nextPlayerHp = Math.max(0, playerPoke.currentHp - machineDamage)
 
-      return newTeam
+    setTeam(prev => ({
+      player: prev.player.map((pokemon, index) =>
+        index === currentRound
+          ? { ...pokemon, currentHp: nextPlayerHp }
+          : pokemon
+      ),
+      machine: prev.machine.map((pokemon, index) =>
+        index === currentRound
+          ? { ...pokemon, currentHp: nextMachineHp }
+          : pokemon
+      ),
+    }))
+
+    const roundWinner: 'player' | 'machine' | 'draw' =
+      nextMachineHp <= 0 && nextPlayerHp > 0
+        ? 'player'
+        : nextPlayerHp <= 0 && nextMachineHp > 0
+          ? 'machine'
+          : nextPlayerHp > nextMachineHp
+            ? 'player'
+            : nextMachineHp > nextPlayerHp
+              ? 'machine'
+              : 'draw'
+
+    setRoundResults(prev => {
+      const updated = [...prev]
+
+      updated[currentRound] = roundWinner
+
+      return updated
     })
 
     const logs = [
       `⚔️ ${playerPoke.name} ataca!`,
       playerResult.isCritical ? '💥 Golpe Crítico!' : '',
-      playerResult.multiplier > 1 ? '🔥 Super efetivo!' : playerResult.multiplier < 1 ? '💧 Não muito efetivo...' : '',
+      playerResult.multiplier > 1
+        ? '🔥 Super efetivo!'
+        : playerResult.multiplier < 1
+          ? '💧 Não muito efetivo...'
+          : '',
       `💨 Causou ${playerDamage} de dano!`,
-      ``,
+      '',
       `🛡️ ${machinePoke.name} contra-ataca!`,
-      machineResult.multiplier > 1 ? '🔥 Super efetivo!' : machineResult.multiplier < 1 ? '💧 Não muito efetivo...' : '',
+      machineResult.isCritical ? '💥 Golpe Crítico!' : '',
+      machineResult.multiplier > 1
+        ? '🔥 Super efetivo!'
+        : machineResult.multiplier < 1
+          ? '💧 Não muito efetivo...'
+          : '',
       `💨 Causou ${machineDamage} de dano!`,
     ].filter(Boolean)
 
@@ -277,12 +355,18 @@ export function useBattle() {
       setAbilities(generateAbilities())
       setPhase('abilities')
     } else {
-      const playerWins = team.player.filter(p => p.currentHp > 0).length
-      const machineWins = team.machine.filter(p => p.currentHp > 0).length
-      
-      setPhase(playerWins > machineWins ? 'victory' : 'defeat')
+      const playerWins = roundResults.filter(result => result === 'player').length
+      const machineWins = roundResults.filter(result => result === 'machine').length
+
+      if (playerWins > machineWins) {
+        setPhase('victory')
+      } else if (machineWins > playerWins) {
+        setPhase('defeat')
+      } else {
+        setPhase('result')
+      }
     }
-  }, [currentRound, team, generateAbilities])
+  }, [currentRound, generateAbilities, roundResults])
 
   // Resetar batalha
   const resetBattle = useCallback(() => {
@@ -297,28 +381,36 @@ export function useBattle() {
   // Stats do round atual
   const currentRoundStats = useMemo(() => {
     if (team.player.length === 0) return null
-    
+
     const playerPoke = team.player[currentRound]
     const machinePoke = team.machine[currentRound]
-    
+
     if (!playerPoke || !machinePoke) return null
+
+    const roundResult = roundResults[currentRound]
 
     return {
       player: playerPoke,
       machine: machinePoke,
-      playerWon: machinePoke.currentHp <= 0 && playerPoke.currentHp > 0,
-      machineWon: playerPoke.currentHp <= 0 && machinePoke.currentHp > 0,
-      draw: playerPoke.currentHp <= 0 && machinePoke.currentHp <= 0,
+      playerWon: roundResult === 'player',
+      machineWon: roundResult === 'machine',
+      draw: roundResult === 'draw',
     }
-  }, [team, currentRound])
+  }, [team, currentRound, roundResults])
 
   // Stats finais
   const finalStats = useMemo(() => {
-    const playerWins = team.player.filter(p => p.currentHp > 0).length
-    const machineWins = team.machine.filter(p => p.currentHp > 0).length
+    const playerWins = roundResults.filter(result => result === 'player').length
+    const machineWins = roundResults.filter(result => result === 'machine').length
+    const draws = roundResults.filter(result => result === 'draw').length
 
-    return { playerWins, machineWins, totalRounds: 3 }
-  }, [team])
+    return {
+      playerWins,
+      machineWins,
+      draws,
+      totalRounds: roundResults.length,
+    }
+  }, [roundResults])
 
   return {
     team,
