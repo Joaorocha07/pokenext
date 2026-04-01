@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useRef, useState } from 'react'
 
 import { usePathname } from 'next/navigation'
 
-import { Heart, Search, X } from 'lucide-react'
+import { Heart, Search, Swords, X } from 'lucide-react' // Adicionei Swords
 
 import type { PokemonSlim } from '@/services/pokeapi/types'
 
@@ -115,6 +115,7 @@ export function Header({ onSearch, isLoading }: HeaderProps) {
   }
 
   const isFavoritesPage = pathname === '/favoritos'
+  const isBattlePage = pathname === '/combate' // NOVO
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-zinc-200 dark:bg-zinc-950/80 dark:border-zinc-800">
@@ -257,6 +258,7 @@ export function Header({ onSearch, isLoading }: HeaderProps) {
         </div>
       </div>
 
+      {/* SUBMENU / BREADCRUMB - ATUALIZADO COM ARENA DE BATALHAS */}
       <div className="border-t border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-14 gap-6 text-sm">
@@ -290,6 +292,25 @@ export function Header({ onSearch, isLoading }: HeaderProps) {
             >
               <span className="w-2 h-2 rounded-full bg-red-400" />
               Meus Favoritos
+            </Link>
+
+            {/* NOVO: Arena de Batalhas */}
+            <div className="w-px h-4 bg-zinc-300 dark:bg-zinc-700" />
+            
+            <Link 
+              href="/combate" 
+              className={`flex items-center gap-2 transition-colors ${
+                isBattlePage 
+                  ? 'text-red-500 font-medium' 
+                  : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
+              }`}
+            >
+              <span className={`
+                w-2 h-2 rounded-full
+                ${isBattlePage ? 'bg-red-500 animate-pulse' : 'bg-orange-400'}
+              `} />
+              <Swords className="w-3 h-3" />
+              Arena de Batalhas
             </Link>
           </div>
         </div>

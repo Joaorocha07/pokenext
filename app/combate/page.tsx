@@ -6,6 +6,8 @@
 'use client'
 import { useEffect, useState } from 'react'
 
+import { BattleHeader } from './components/Header'
+
 import { BattleLog } from './components/BattleLog'
 
 import { BattleCard } from './components/BattleCard'
@@ -56,8 +58,6 @@ export default function BattlePage() {
 
   const bothFainted = team.player[currentRound]?.currentHp <= 0 && 
     team.machine[currentRound].currentHp <= 0
-
-  console.log(bothFainted)
 
   // Carregar favoritos
   useEffect(() => {
@@ -612,6 +612,10 @@ export default function BattlePage() {
   return (
     <div className="min-h-screen bg-zinc-950">
       {/* <Header /> */}
+      <BattleHeader 
+        currentRound={currentRound + 1} 
+        totalRounds={3} 
+      />
       
       <main className="pt-24 pb-32 px-4">
         <div className="max-w-6xl mx-auto">
