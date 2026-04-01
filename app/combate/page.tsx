@@ -6,11 +6,11 @@
 'use client'
 import { useEffect, useState } from 'react'
 
-import { BattleHeader } from './components/Header'
-
 import { BattleLog } from './components/BattleLog'
 
 import { BattleCard } from './components/BattleCard'
+
+import { Header } from '../pokemon/components/Header'
 
 import { useBattle } from '@/hooks/combate/useBattle'
 
@@ -614,8 +614,9 @@ export default function BattlePage() {
   return (
     <div className="min-h-screen bg-zinc-950">
       {/* <Header /> */}
-      <BattleHeader 
+      <Header 
         currentRound={currentRound + 1} 
+        showSearch={false}
         totalRounds={3} 
       />
       
