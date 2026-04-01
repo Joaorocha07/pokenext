@@ -1,445 +1,528 @@
+/* eslint-disable max-len */
+/* eslint-disable @next/next/no-html-link-for-pages */
+/* eslint-disable react-hooks/rules-of-hooks */
+/* eslint-disable @next/next/no-img-element */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// app/multiplayer/page.tsx
 'use client'
-
 import { useEffect, useState } from 'react'
+
+import { BattleLog } from './components/BattleLog'
+
+import { BattleCard } from './components/BattleCard'
+
+import { useBattle } from '@/hooks/combate/useBattle'
+
+import { AbilityCard } from './components/AbilityCard'
+
+import { BattleArena } from './components/BattleArena'
+
+import type { Pokemon } from '@/services/pokeapi/types'
+
+import { AnimatePresence, motion } from 'framer-motion'
+
 import { useFavorites } from '@/hooks/pokemon/useFavorites'
+
+import { RoundIndicator } from './components/RoundIndicator'
+
+import { EmptyState } from '../pokemon/components/EmptyState'
 
 import { pokemonService } from '@/services/pokeapi/pokemonService'
 
-import { BattleRoom } from '@/types/multiplayer'
-
-import { 
-  cleanupOldRooms, 
-  getPlayerId, 
-  joinRoom, 
-  pollRoom,
-  selectPokemonForRound 
-} from '@/services/multiplayer/battleService'
-import { Header } from '../pokemon/components/Header'
-
 import { LoadingSpinner } from '../pokemon/components/LoadingSpinner'
 
-import { Clock, Shield, Swords, Users,  } from 'lucide-react'
+import confetti from 'canvas-confetti'
 
-import Image from 'next/image'
-import Link from 'next/link'
-
-export default function MultiplayerPage() {
+export default function BattlePage() {
   const { favorites, isLoaded } = useFavorites()
-  const [playerName, setPlayerName] = useState('')
-  const [roomId, setRoomId] = useState('')
-  const [currentRoom, setCurrentRoom] = useState<BattleRoom | null>(null)
-  const [myPokemon, setMyPokemon] = useState<any[]>([])
-  const [selectedForBattle, setSelectedForBattle] = useState<number[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [availablePokemons, setAvailablePokemons] = useState<Pokemon[]>([])
 
-  // Limpa salas antigas
+  const {
+    team,
+    phase,
+    abilities,
+    battleLog,
+    finalStats,
+    currentRound,
+    selectedAbilityId,
+    currentRoundStats,
+    nextRound,
+    useAbility,
+    resetBattle,
+    startBattle,
+    executeBattle
+  } = useBattle()
+
+  // Carregar favoritos
   useEffect(() => {
-    cleanupOldRooms()
-  }, [])
-
-  // Polling quando está em uma sala
-  useEffect(() => {
-    if (!currentRoom) return
+    if (!isLoaded) return
     
-    const unsubscribe = pollRoom(currentRoom.id, (updatedRoom) => {
-      setCurrentRoom(updatedRoom)
-    })
-    
-    return unsubscribe
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentRoom?.id])
-
-  // Carrega dados dos Pokémon selecionados
-  useEffect(() => {
-    if (selectedForBattle.length === 3) {
-      Promise.all(selectedForBattle.map(id => pokemonService.getByIdOrName(id)))
-        .then(setMyPokemon)
+    if (favorites.length > 0) {
+      setIsLoading(true)
+      Promise.all(favorites.map(id => pokemonService.getByIdOrName(String(id))))
+        .then(results => {
+          setAvailablePokemons(results)
+          setIsLoading(false)
+        })
+        .catch(() => setIsLoading(false))
+    } else {
+      setIsLoading(false)
     }
-  }, [selectedForBattle])
+  }, [favorites, isLoaded])
 
-  const handleJoinRoom = () => {
-    if (!playerName.trim() || selectedForBattle.length !== 3) {
-      setError('Digite seu nome e selecione 3 Pokémon!')
-      
-return
-    }
-    
-    setIsLoading(true)
-    const room = joinRoom(roomId || 'sala-1', playerName, selectedForBattle)
+  // Iniciar batalha
+  const handleStartBattle = () => {
+    const selected = availablePokemons.filter(p => selectedIds.includes(p.id))
 
-    if (room) {
-      setCurrentRoom(room)
-      setError('')
-    }
-    setIsLoading(false)
+    startBattle(selected)
   }
 
-  const handleSelectPokemonForRound = (index: number) => {
-    if (!currentRoom) return
-    const updated = selectPokemonForRound(currentRoom.id, getPlayerId(), index)
+  // Efeito de vitória
+  const triggerVictory = () => {
+    const duration = 3 * 1000
+    const animationEnd = Date.now() + duration
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 }
 
-    if (updated) setCurrentRoom(updated)
+    const randomInRange = (
+      min: number, max: number) => Math.random() * (max - min) + min
+
+    const interval: any = setInterval(function() {
+      const timeLeft = animationEnd - Date.now()
+
+      if (timeLeft <= 0) {
+        return clearInterval(interval)
+      }
+
+      const particleCount = 50 * (timeLeft / duration)
+
+      confetti({
+        ...defaults, particleCount,
+        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+      })
+      confetti({
+        ...defaults, particleCount,
+        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+      })
+    }, 250)
   }
 
-  const isMyTurn = currentRoom?.currentTurn === getPlayerId()
-  const amIPlayer1 = currentRoom?.player1?.id === getPlayerId()
-  const me = amIPlayer1 ? currentRoom?.player1 : currentRoom?.player2
-  const opponent = amIPlayer1 ? currentRoom?.player2 : currentRoom?.player1
-
-  // TELA DE SELEÇÃO DE 3 POKÉMON
-  if (!currentRoom) {
-    return (
-      <div className="min-h-screen bg-zinc-950">
-        <Header onSearch={() => {}} isLoading={false} />
+  // Renderizar fase de seleção
+  const renderSelection = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="space-y-8"
+    >
+      <div className="text-center space-y-4">
+        <h1 className="text-4xl md:text-5xl font-black text-white">
+          ⚔️ Arena de Batalha
+        </h1>
+        <p className="text-zinc-400 text-lg">
+          Monte seu time de 3 Pokémon e enfrente desafios misteriosos
+        </p>
         
-        <main className="pt-8 pb-12 max-w-4xl mx-auto px-4">
-          <div className="text-center mb-10">
-            <h1 className="text-4xl font-bold text-white mb-4 flex items-center justify-center gap-3">
-              <Users className="w-10 h-10 text-blue-400" />
-              Batalha Multiplayer
-            </h1>
-            <p className="text-zinc-400">Melhor de 3 • 1v1 • 5 Salas Disponíveis</p>
-          </div>
-
-          {/* Salas disponíveis */}
-          <div className="grid grid-cols-5 gap-2 mb-8">
-            {[1, 2, 3, 4, 5].map(num => (
-              <button
-                key={num}
-                onClick={() => setRoomId(`sala-${num}`)}
-                className={`p-4 rounded-xl border-2 transition-all ${
-                  roomId === `sala-${num}`
-                    ? 'border-blue-400 bg-blue-400/20 text-blue-400'
-                    : 'border-zinc-700 bg-zinc-900 text-zinc-400 hover:border-zinc-500'
-                }`}
-              >
-                <div className="text-2xl font-bold">{num}</div>
-                <div className="text-xs">Sala</div>
-              </button>
-            ))}
-          </div>
-
-          {/* Nome do jogador */}
-          <div className="mb-6">
-            <input
-              type="text"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              placeholder="Seu nome..."
-              className="w-full p-4 bg-zinc-900 border border-zinc-700 rounded-xl text-white text-center text-lg"
-            />
-          </div>
-
-          {/* Seleção de 3 Pokémon */}
-          <h2 className="text-xl font-semibold text-white mb-4 text-center">
-            Escolha seus 3 Pokémon ({selectedForBattle.length}/3)
-          </h2>
-          
-          {isLoaded && favorites.length > 0 ? (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 mb-8">
-              {favorites.map((id) => (
-                <PokemonMiniCard
-                  key={id}
-                  id={id}
-                  isSelected={selectedForBattle.includes(id)}
-                  onClick={() => {
-                    if (selectedForBattle.includes(id)) {
-                      setSelectedForBattle(prev => prev.filter(p => p !== id))
-                    } else if (selectedForBattle.length < 3) {
-                      setSelectedForBattle(prev => [...prev, id])
-                    }
-                  }}
+        {/* Indicador de seleção */}
+        <div className="flex justify-center gap-4 mt-6">
+          {[0, 1, 2].map(i => (
+            <motion.div
+              key={i}
+              animate={{
+                scale: selectedIds.length > i ? 1.1 : 1,
+                borderColor: selectedIds.length > i ? '#10b981' : '#52525b'
+              }}
+              className={`
+                w-16 h-16 rounded-2xl border-2 flex items-center justify-center text-2xl
+                transition-colors duration-300
+                ${selectedIds.length > i 
+                  ? 'bg-emerald-500/20 border-emerald-500' 
+                  : 'bg-zinc-800 border-zinc-600'}
+              `}
+            >
+              {selectedIds.length > i ? (
+                <img 
+                  src={pokemonService.getImageUrl(selectedIds[i])}
+                  alt="selected"
+                  className="w-12 h-12 object-contain"
                 />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center text-zinc-500 py-8">
-              Você precisa ter favoritos! <Link href="/pokemon" className="text-yellow-400">Adicione aqui</Link>
-            </div>
-          )}
-
-          {error && <p className="text-red-400 text-center mb-4">{error}</p>}
-
-          <button
-            onClick={handleJoinRoom}
-            disabled={isLoading || 
-                selectedForBattle.length !== 3 || !playerName.trim() || !roomId}
-            className="w-full py-4 bg-blue-400 hover:bg-blue-500 disabled:bg-zinc-700 text-black font-bold rounded-xl transition-all flex items-center justify-center gap-2"
-          >
-            {isLoading ? <LoadingSpinner size="sm" /> : <><Swords className="w-5 h-5" /> ENTRAR NA SALA</>}
-          </button>
-        </main>
+              ) : (
+                <span className="text-zinc-500">{i + 1}</span>
+              )}
+            </motion.div>
+          ))}
+        </div>
+        <p className="text-sm text-zinc-500">
+          {selectedIds.length}/3 Pokémon selecionados
+        </p>
       </div>
+
+      {/* Grid de Pokémon */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {availablePokemons.map(pokemon => {
+          const isSelected = selectedIds.includes(pokemon.id)
+          const canSelect = selectedIds.length < 3 || isSelected
+
+          return (
+            <motion.button
+              key={pokemon.id}
+              layoutId={`pokemon-${pokemon.id}`}
+              whileHover={canSelect ? { scale: 1.03, y: -5 } : {}}
+              whileTap={canSelect ? { scale: 0.97 } : {}}
+              onClick={() => {
+                if (isSelected) {
+                  setSelectedIds(prev => prev.filter(id => id !== pokemon.id))
+                } else if (canSelect) {
+                  setSelectedIds(prev => [...prev, pokemon.id])
+                }
+              }}
+              className={`
+                relative p-4 rounded-2xl border-2 transition-all
+                ${isSelected
+                  ? 'border-emerald-500 bg-emerald-500/20 shadow-lg shadow-emerald-500/20'
+                  : canSelect
+                    ? 'border-zinc-700 bg-zinc-800/50 hover:border-zinc-500 hover:bg-zinc-800'
+                    : 'border-zinc-800 bg-zinc-900/50 opacity-50 cursor-not-allowed'}
+              `}
+            >
+              <img
+                src={pokemonService.getImageUrl(pokemon.id)}
+                alt={pokemon.name}
+                className="w-24 h-24 mx-auto object-contain drop-shadow-lg"
+              />
+              <p className="text-center capitalize text-white font-semibold mt-2">
+                {pokemon.name}
+              </p>
+              <div className="flex justify-center gap-1 mt-2">
+                {pokemon.types.map(t => (
+                  <span
+                    key={t.type.name}
+                    className="px-2 py-0.5 rounded-full text-xs bg-zinc-700 text-zinc-300"
+                  >
+                    {t.type.name}
+                  </span>
+                ))}
+              </div>
+              
+              {isSelected && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg"
+                >
+                  <span className="text-white text-sm">✓</span>
+                </motion.div>
+              )}
+            </motion.button>
+          )
+        })}
+      </div>
+
+      {/* Botão de iniciar */}
+      <AnimatePresence>
+        {selectedIds.length === 3 && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-8 left-0 right-0 flex justify-center z-50"
+          >
+            <button
+              onClick={handleStartBattle}
+              className="
+                px-10 py-5 bg-linear-to-r from-emerald-500 to-teal-500 
+                text-white font-bold text-lg rounded-full 
+                shadow-2xl shadow-emerald-500/30 
+                hover:shadow-emerald-500/50 hover:scale-105
+                transition-all duration-300
+                flex items-center gap-3
+              "
+            >
+              <span>⚔️</span>
+              Iniciar Batalha
+              <span>⚔️</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+
+  // Renderizar fase de habilidades
+  const renderAbilities = () => (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="space-y-8"
+    >
+      <div className="text-center space-y-2">
+        <h2 className="text-3xl font-bold text-white">🎲 Habilidades ocultas</h2>
+        <p className="text-zinc-400">
+          Round {currentRound + 1} de 3 • Escolha uma habilidade ou arrisque sem usar
+        </p>
+      </div>
+
+      {/* Cards de habilidade */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+        {abilities.map((ability, index) => (
+          <AbilityCard
+            key={ability.id}
+            ability={ability}
+            index={index}
+            isSelected={selectedAbilityId === ability.id}
+            onSelect={() => useAbility(ability.id)}
+          />
+        ))}
+      </div>
+
+      {/* Preview do confronto */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="space-y-4">
+          <p className="text-center text-emerald-400 font-bold text-lg">Seu Pokémon</p>
+          <BattleCard
+            pokemon={team.player[currentRound]}
+            isPlayer
+            showStats
+          />
+        </div>
+        
+        <div className="space-y-4">
+          <p className="text-center text-red-400 font-bold text-lg">Oponente</p>
+          <BattleCard
+            pokemon={team.machine[currentRound]}
+            isPlayer={false}
+            showStats={team.machine[currentRound].revealed.stats}
+          />
+        </div>
+      </div>
+
+      {/* Botões de ação */}
+      <div className="flex justify-center gap-4">
+        <button
+          onClick={executeBattle}
+          className="
+            px-8 py-4 border-2 border-zinc-600 text-zinc-400 
+            rounded-full font-semibold
+            hover:border-zinc-400 hover:text-white 
+            transition-all duration-300
+          "
+        >
+          Pular Habilidade →
+        </button>
+        
+        {selectedAbilityId && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            onClick={executeBattle}
+            className="
+              px-8 py-4 bg-linear-to-r from-purple-500 to-pink-500 
+              text-white rounded-full font-bold
+              shadow-lg shadow-purple-500/25
+              hover:shadow-purple-500/40 hover:scale-105
+              transition-all duration-300
+            "
+          >
+            Usar Habilidade & Atacar!
+          </motion.button>
+        )}
+      </div>
+    </motion.div>
+  )
+
+  // Renderizar resultado
+  const renderResult = () => {
+    if (!currentRoundStats) return null
+    
+    const { playerWon, draw } = currentRoundStats
+    
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="text-center space-y-8"
+      >
+        <motion.div
+          initial={{ scale: 0, rotate: -180 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+          className={`
+            text-7xl font-black
+            ${draw ? 'text-yellow-400' : playerWon ? 'text-emerald-400' : 'text-red-400'}
+          `}
+        >
+          {draw ? '🤝 EMPATE!' : playerWon ? '🎉 VITÓRIA!' : '💔 DERROTA!'}
+        </motion.div>
+
+        <div className="grid grid-cols-2 gap-6 max-w-2xl mx-auto">
+          <motion.div
+            initial={{ x: -50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            className={`
+              p-6 rounded-2xl border-2
+              ${playerWon ? 'bg-emerald-500/20 border-emerald-500' : 'bg-zinc-800 border-zinc-700'}
+            `}
+          >
+            <p className="text-emerald-400 font-bold mb-2">{team.player[currentRound].name}</p>
+            <p className="text-4xl font-black text-white">
+              {team.player[currentRound].currentHp} HP
+            </p>
+            <p className="text-sm text-zinc-400 mt-2">
+              {team.player[currentRound].currentHp > 0 ? 'Sobreviveu!' : 'Desmaiou'}
+            </p>
+          </motion.div>
+          
+          <motion.div
+            initial={{ x: 50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            className={`
+              p-6 rounded-2xl border-2
+              ${!playerWon && !draw ? 'bg-red-500/20 border-red-500' : 'bg-zinc-800 border-zinc-700'}
+            `}
+          >
+            <p className="text-red-400 font-bold mb-2">{team.machine[currentRound].name}</p>
+            <p className="text-4xl font-black text-white">
+              {team.machine[currentRound].currentHp} HP
+            </p>
+            <p className="text-sm text-zinc-400 mt-2">
+              {team.machine[currentRound].currentHp > 0 ? 'Sobreviveu!' : 'Desmaiou'}
+            </p>
+          </motion.div>
+        </div>
+
+        <BattleLog logs={battleLog} />
+
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={nextRound}
+          className="
+            px-10 py-5 bg-emerald-500 text-white font-bold rounded-full
+            shadow-xl shadow-emerald-500/25
+            hover:shadow-emerald-500/40
+            transition-all duration-300
+          "
+        >
+          {currentRound < 2 ? 'Próximo Round →' : 'Ver Resultado Final'}
+        </motion.button>
+      </motion.div>
     )
   }
 
-  // AGUARDANDO OPONENTE
-  if (currentRoom.status === 'waiting') {
+  // Renderizar tela final
+  const renderFinal = () => {
+    const won = finalStats.playerWins > finalStats.machineWins
+    
+    if (won) triggerVictory()
+    
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="text-center space-y-8"
+      >
+        <motion.div
+          initial={{ scale: 0, y: 50 }}
+          animate={{ scale: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 100 }}
+          className="space-y-4"
+        >
+          <div className="text-8xl">{won ? '🏆' : '💔'}</div>
+          <h2 className={`text-5xl md:text-6xl font-black ${won ? 'text-emerald-400' : 'text-red-400'}`}>
+            {won ? 'VITÓRIA TOTAL!' : 'DERROTA...'}
+          </h2>
+          <p className="text-zinc-400 text-xl">
+            {won 
+              ? 'Você provou ser um verdadeiro mestre Pokémon!' 
+              : 'Não foi dessa vez. Treine mais e tente novamente!'}
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-2 gap-6 max-w-lg mx-auto">
+          <div className="p-6 bg-emerald-500/10 rounded-2xl border-2 border-emerald-500/50">
+            <p className="text-emerald-400 font-bold mb-2">Suas Vitórias</p>
+            <p className="text-5xl font-black text-white">{finalStats.playerWins}</p>
+            <p className="text-sm text-zinc-500 mt-2">de 3 rounds</p>
+          </div>
+          <div className="p-6 bg-red-500/10 rounded-2xl border-2 border-red-500/50">
+            <p className="text-red-400 font-bold mb-2">Vitórias Máquina</p>
+            <p className="text-5xl font-black text-white">{finalStats.machineWins}</p>
+            <p className="text-sm text-zinc-500 mt-2">de 3 rounds</p>
+          </div>
+        </div>
+
+        <div className="flex justify-center gap-4">
+          <button
+            onClick={resetBattle}
+            className="
+              px-8 py-4 bg-zinc-700 text-white font-bold rounded-full
+              hover:bg-zinc-600 transition-all duration-300
+            "
+          >
+            Jogar Novamente
+          </button>
+          <a
+            href="/pokemon"
+            className="
+              px-8 py-4 bg-emerald-500 text-white font-bold rounded-full
+              hover:bg-emerald-600 transition-all duration-300
+            "
+          >
+            Ver Pokémons
+          </a>
+        </div>
+      </motion.div>
+    )
+  }
+
+  if (!isLoaded || isLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative w-32 h-32 mx-auto mb-6">
-            <div className="absolute inset-0 bg-blue-400/30 rounded-full animate-ping" />
-            <Clock className="w-32 h-32 text-blue-400 animate-pulse" />
-          </div>
-          <h2 className="text-3xl font-bold text-white mb-2">Aguardando oponente...</h2>
-          <p className="text-zinc-400">Sala: {currentRoom.id}</p>
-          <p className="text-zinc-500 mt-4">Compartilhe o número da sala com um amigo!</p>
+        <LoadingSpinner />
+      </div>
+    )
+  }
+
+  if (favorites.length === 0) {
+    return (
+      <div className="min-h-screen bg-zinc-950 pt-24 px-4">
+        <div className="max-w-4xl mx-auto">
+          <EmptyState 
+            type="no-favorites" 
+            message="Você precisa de favoritos para batalhar!"
+          />
         </div>
       </div>
     )
   }
 
-  // SELEÇÃO DE POKÉMON PARA A RODADA
-  if (currentRoom.status === 'selecting' || (currentRoom.status === 'battling' && !me?.ready)) {
-    return (
-      <div className="min-h-screen bg-zinc-950">
-        <Header onSearch={() => {}} isLoading={false} />
-        
-        <main className="pt-8 pb-12 max-w-4xl mx-auto px-4">
-          {/* Info do oponente */}
-          <div className="flex justify-between items-center mb-8 p-4 bg-zinc-900 rounded-xl">
-            <div>
-              <p className="text-zinc-400 text-sm">Você</p>
-              <p className="text-white font-bold">{me?.name}</p>
-            </div>
-            <div className="text-zinc-600">vs</div>
-            <div className="text-right">
-              <p className="text-zinc-400 text-sm">Oponente</p>
-              <p className="text-white font-bold">{opponent?.name || '...'}</p>
-              {opponent?.ready && <span className="text-green-400 text-xs">Pronto!</span>}
-            </div>
-          </div>
-
-          <h2 className="text-2xl font-bold text-white text-center mb-2">
-            Rodada {currentRoom.round} de 3
-          </h2>
-          <p className="text-zinc-400 text-center mb-8">
-            {isMyTurn ? 'Sua vez de escolher!' : 'Aguardando oponente...'}
-          </p>
-
-          <div className="grid grid-cols-3 gap-4">
-            {myPokemon.map((pokemon, index) => (
-              <button
-                key={pokemon.id}
-                onClick={() => handleSelectPokemonForRound(index)}
-                disabled={!isMyTurn}
-                className={`p-6 rounded-2xl border-2 transition-all ${
-                  me?.selectedPokemonIndex === index
-                    ? 'border-green-400 bg-green-400/20 scale-105'
-                    : 'border-zinc-700 bg-zinc-900 hover:border-zinc-500'
-                } ${!isMyTurn ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <div className="relative w-24 h-24 mx-auto mb-3">
-                  <Image
-                    src={pokemonService.getImageUrl(
-                        pokemon.id, { official: true })}
-                    alt={pokemon.name}
-                    fill
-                    className="object-contain"
-                    unoptimized
-                  />
-                </div>
-                <p className="text-white font-bold capitalize">{pokemon.name}</p>
-                <p className="text-zinc-400 text-sm">Poder: {
-                  pokemon.stats.reduce(
-                    (a: number, s: any) => a + s.base_stat, 0)
-                }</p>
-              </button>
-            ))}
-          </div>
-
-          {me?.ready && !opponent?.ready && (
-            <p className="text-center text-yellow-400 mt-8 animate-pulse">
-              Aguardando {opponent?.name} escolher...
-            </p>
-          )}
-        </main>
-      </div>
-    )
-  }
-
-  // BATALHA EM ANDAMENTO
-  const currentAction = currentRoom.battleLog[currentRoom.battleLog.length - 1]
-  
   return (
     <div className="min-h-screen bg-zinc-950">
-      <Header onSearch={() => {}} isLoading={false} />
+      {/* <Header /> */}
       
-      <main className="pt-8 pb-12 max-w-6xl mx-auto px-4">
-        {/* Placar */}
-        <div className="flex justify-center gap-12 mb-8">
-          <div className="text-center">
-            <p className="text-blue-400 font-bold">{me?.name}</p>
-            <div className="text-5xl font-bold text-white">
-              {currentRoom.battleLog.filter(l => 
-                amIPlayer1 ? l.winner === 'player1' : l.winner === 'player2'
-              ).length}
-            </div>
-          </div>
-          <div className="flex items-center">
-            <span className="text-3xl font-bold text-zinc-600">vs</span>
-          </div>
-          <div className="text-center">
-            <p className="text-red-400 font-bold">{opponent?.name}</p>
-            <div className="text-5xl font-bold text-white">
-              {currentRoom.battleLog.filter(l => 
-                amIPlayer1 ? l.winner === 'player2' : l.winner === 'player1'
-              ).length}
-            </div>
-          </div>
-        </div>
-
-        <p className="text-center text-yellow-400 font-medium mb-8">
-          RODADA {currentRoom.round} DE 3
-        </p>
-
-        {/* Arena */}
-        <div className="relative bg-linear-to-b from-zinc-900 to-zinc-950 rounded-3xl p-8 border border-zinc-800 mb-8">
-          <div className="flex justify-between items-center gap-8">
-            {/* Meu Pokémon */}
-            <div className="flex-1 text-center">
-              {currentAction ? (
-                <>
-                  <PokemonDisplay 
-                  id={currentAction.player1Pokemon} isPlayer1={true} />
-                  <p className="text-3xl font-bold text-blue-400 mt-4">{currentAction.player1Power}</p>
-                </>
-              ) : (
-                <div className="w-48 h-48 mx-auto bg-zinc-800 rounded-full flex items-center justify-center">
-                  <Shield className="w-16 h-16 text-zinc-600" />
-                </div>
-              )}
-            </div>
-
-            {/* VS */}
-            <div className="text-6xl font-black text-zinc-600">
-              {currentAction ? '⚔️' : 'VS'}
-            </div>
-
-            {/* Oponente */}
-            <div className="flex-1 text-center">
-              {currentAction ? (
-                <>
-                  <PokemonDisplay 
-                  id={currentAction.player2Pokemon} isPlayer1={false} />
-                  <p className="text-3xl font-bold text-red-400 mt-4">{currentAction.player2Power}</p>
-                </>
-              ) : (
-                <div className="w-48 h-48 mx-auto bg-zinc-800 rounded-full flex items-center justify-center">
-                  <Shield className="w-16 h-16 text-zinc-600" />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Resultado da rodada */}
-          {currentAction && (
-            <div className="mt-8 text-center">
-              <div className={`text-2xl font-bold ${
-                (amIPlayer1 && currentAction.winner === 'player1') || 
-                (!amIPlayer1 && currentAction.winner === 'player2')
-                  ? 'text-green-400'
-                  : currentAction.winner === 'draw'
-                    ? 'text-yellow-400'
-                    : 'text-red-400'
-              }`}>
-                {(amIPlayer1 && currentAction.winner === 'player1') || 
-                 (!amIPlayer1 && currentAction.winner === 'player2')
-                  ? '✓ VOCÊ VENCEU ESTA RODADA!'
-                  : currentAction.winner === 'draw'
-                    ? '⟳ EMPATE!'
-                    : '✗ VOCÊ PERDEU ESTA RODADA'}
-              </div>
-            </div>
+      <main className="pt-24 pb-32 px-4">
+        <div className="max-w-6xl mx-auto">
+          {/* Indicador de rounds */}
+          {phase !== 'selection' && phase !== 'victory' && phase !== 'defeat' && (
+            <RoundIndicator current={currentRound} total={3} />
           )}
-        </div>
 
-        {/* Botão próxima rodada ou resultado final */}
-        {currentRoom.status === 'finished' ? (
-          <div className="text-center">
-            <div className={`text-5xl font-bold mb-4 ${
-              currentRoom.winner === getPlayerId() ? 'text-yellow-400' : 'text-zinc-400'
-            }`}>
-              {currentRoom.winner === getPlayerId() ? '🏆 VITÓRIA!' : '💔 DERROTA!'}
-            </div>
-            <button
-              onClick={() => setCurrentRoom(null)}
-              className="px-8 py-4 bg-blue-400 hover:bg-blue-500 text-black font-bold rounded-full"
-            >
-              JOGAR NOVAMENTE
-            </button>
-          </div>
-        ) : currentAction && (
-          <div className="text-center">
-            <p className="text-zinc-400 mb-4">Aguardando próxima rodada...</p>
-          </div>
-        )}
+          <AnimatePresence mode="wait">
+            {phase === 'selection' && renderSelection()}
+            {phase === 'abilities' && renderAbilities()}
+            {phase === 'battle' && (
+              <BattleArena
+                player={team.player[currentRound]}
+                machine={team.machine[currentRound]}
+                logs={battleLog}
+              />
+            )}
+            {phase === 'result' && renderResult()}
+            {(phase === 'victory' || phase === 'defeat') && renderFinal()}
+          </AnimatePresence>
+        </div>
       </main>
-    </div>
-  )
-}
-
-// Componentes auxiliares
-function PokemonMiniCard({ 
-    id, isSelected, onClick 
-}: { id: number; isSelected: boolean; onClick: () => void }) {
-  const [pokemon, setPokemon] = useState<any>(null)
-  
-  useEffect(() => {
-    pokemonService.getByIdOrName(id).then(setPokemon)
-  }, [id])
-  
-  if (!pokemon) return <div className="aspect-square bg-zinc-800 rounded-xl animate-pulse" />
-  
-  return (
-    <button
-      onClick={onClick}
-      className={`relative aspect-square p-2 rounded-xl border-2 transition-all ${
-        isSelected ? 'border-blue-400 bg-blue-400/20' : 'border-zinc-700 bg-zinc-900'
-      }`}
-    >
-      <Image
-        src={pokemonService.getImageUrl(pokemon.id, { official: true })}
-        alt={pokemon.name}
-        fill
-        className="object-contain p-2"
-        unoptimized
-      />
-      {isSelected && (
-        <div className="absolute top-1 right-1 w-6 h-6 bg-blue-400 rounded-full flex items-center justify-center text-black font-bold text-xs">
-          ✓
-        </div>
-      )}
-    </button>
-  )
-}
-
-function PokemonDisplay({ id, isPlayer1 }: { id: number; isPlayer1: boolean }) {
-  const [pokemon, setPokemon] = useState<any>(null)
-  
-  useEffect(() => {
-    pokemonService.getByIdOrName(id).then(setPokemon)
-  }, [id])
-  
-  if (!pokemon) return <div className="w-48 h-48 animate-pulse bg-zinc-800 rounded-full" />
-  
-  return (
-    <div className="relative w-48 h-48 mx-auto">
-      <div className={`absolute inset-0 rounded-full blur-2xl ${isPlayer1 ? 'bg-blue-400/30' : 'bg-red-400/30'}`} />
-      <Image
-        src={pokemonService.getImageUrl(pokemon.id, { official: true })}
-        alt={pokemon.name}
-        fill
-        className="object-contain relative z-10"
-        unoptimized
-      />
-      <p className="absolute -bottom-8 left-0 right-0 text-center text-white font-bold capitalize">
-        {pokemon.name}
-      </p>
     </div>
   )
 }
