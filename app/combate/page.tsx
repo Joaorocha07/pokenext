@@ -309,17 +309,19 @@ export default function BattlePage() {
 
       {/* Botões de ação */}
       <div className="flex justify-center gap-4">
-        <button
-          onClick={executeBattle}
-          className="
-            px-8 py-4 border-2 border-zinc-600 text-zinc-400 
-            rounded-full font-semibold
-            hover:border-zinc-400 hover:text-white 
-            transition-all duration-300
-          "
-        >
-          Pular Habilidade →
-        </button>
+        {!selectedAbilityId && (
+          <button
+            onClick={executeBattle}
+            className="
+              px-8 py-4 border-2 border-zinc-600 text-zinc-400 
+              rounded-full font-semibold
+              hover:border-zinc-400 hover:text-white 
+              transition-all duration-300
+            "
+          >
+            Pular Habilidade →
+          </button>
+        )}
         
         {selectedAbilityId && (
           <motion.button
