@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 
+import { useRouter } from 'next/navigation'
+
 import { Header } from '../pokemon/components/Header'
 
 import { useFavorites } from '@/hooks/pokemon/useFavorites'
@@ -22,6 +24,7 @@ interface SecretAbility {
 type TutorialStep = 'intro' | 'selection' | 'abilities' | 'battle' | 'strategy' | 'rewards'
 
 export default function TutorialPage() {
+  const router = useRouter()
   const { favorites, isLoaded } = useFavorites()
   
   const [tutorialStep, setTutorialStep] = useState<TutorialStep>('intro')
@@ -655,7 +658,10 @@ export default function TutorialPage() {
             </div>
 
             <div className="text-center">
-              <button className="bg-linear-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transform hover:scale-105 transition-all">
+              <button
+                onClick={() => router.push('/combate')}
+                className="bg-linear-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transform hover:scale-105 transition-all"
+              >
                 🎮 Começar Batalha Agora
               </button>
               <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-3">
@@ -730,13 +736,17 @@ export default function TutorialPage() {
               <button
                 onClick={prevStep}
                 disabled={tutorialStep === 'intro'}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                  tutorialStep === 'intro'
-                    ? 'text-zinc-300 dark:text-zinc-700 cursor-not-allowed'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                }`}
+                className={`
+                  flex items-center gap-2 px-5 py-2.5 
+                  rounded-full font-semibold transition-all
+                  ${
+                    tutorialStep === 'intro'
+                      ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed'
+                      : 'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:shadow-md hover:scale-105'
+                  }
+                `}
               >
-                <span>←</span> Anterior
+                <span className="text-lg">←</span> Anterior
               </button>
 
               <div className="flex gap-2">
@@ -745,21 +755,19 @@ export default function TutorialPage() {
                 </span>
               </div>
 
-              <button
-                onClick={nextStep}
-                disabled={tutorialStep === 'rewards'}
-                className={`
+              {tutorialStep !== 'rewards' && (
+                <button
+                  onClick={nextStep}
+                  className="
                     flex items-center gap-2 px-6 py-2 
                     rounded-full font-medium transition-all
-                    ${
-                      tutorialStep === 'rewards'
-                        ? 'bg-yellow-300 text-yellow-600 cursor-not-allowed opacity-70'
-                        : 'bg-yellow-400 text-black hover:bg-yellow-300 hover:scale-105 shadow-md'
-                    }
-                `}
-              >
-                Próximo <span>→</span>
-            </button>
+                    bg-yellow-400 text-black 
+                    hover:bg-yellow-300 hover:scale-105 shadow-md
+                  "
+                >
+                  Próximo <span>→</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
