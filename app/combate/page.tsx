@@ -54,6 +54,11 @@ export default function BattlePage() {
     executeBattle
   } = useBattle()
 
+  const bothFainted = team.player[currentRound]?.currentHp <= 0 && 
+    team.machine[currentRound].currentHp <= 0
+
+  console.log(bothFainted)
+
   // Carregar favoritos
   useEffect(() => {
     if (!isLoaded) return
@@ -286,6 +291,7 @@ export default function BattlePage() {
               isPlayer={true}
               showStats={true}
               showHp={true}
+              isDraw={bothFainted}
             />
         </div>
         
@@ -296,6 +302,7 @@ export default function BattlePage() {
             isPlayer={false}
             showStats={team.machine[currentRound].revealed?.stats}
             showHp={true}
+            isDraw={bothFainted}
           />
         </div>
       </div>
@@ -451,6 +458,8 @@ export default function BattlePage() {
   // Renderizar tela final
   const renderFinal = () => {
     const won = finalStats.playerWins > finalStats.machineWins
+    const lost = finalStats.playerWins < finalStats.machineWins
+    const draw = finalStats.playerWins === finalStats.machineWins
     
     if (won) triggerVictory()
     
@@ -466,29 +475,92 @@ export default function BattlePage() {
           transition={{ type: 'spring', stiffness: 100 }}
           className="space-y-4"
         >
-          <div className="text-8xl">{won ? '🏆' : '💔'}</div>
-          <h2 className={`text-5xl md:text-6xl font-black ${won ? 'text-emerald-400' : 'text-red-400'}`}>
-            {won ? 'VITÓRIA TOTAL!' : 'DERROTA...'}
+          <div className="text-8xl">
+            {won ? '🏆' : draw ? '🤝' : '💔'}
+          </div>
+          <h2 className={`
+            text-5xl md:text-6xl font-black
+            ${won ? 'text-emerald-400' : draw ? 'text-yellow-400' : 'text-red-400'}
+          `}>
+            {won ? 'VITÓRIA TOTAL!' : draw ? 'EMPATE!' : 'DERROTA...'}
           </h2>
           <p className="text-zinc-400 text-xl">
             {won 
               ? 'Você provou ser um verdadeiro mestre Pokémon!' 
-              : 'Não foi dessa vez. Treine mais e tente novamente!'}
+              : draw 
+                ? 'Uma batalha equilibrada! Ninguém saiu vencedor desta vez.'
+                : 'Não foi dessa vez. Treine mais e tente novamente!'}
           </p>
         </motion.div>
 
         <div className="grid grid-cols-2 gap-6 max-w-lg mx-auto">
-          <div className="p-6 bg-emerald-500/10 rounded-2xl border-2 border-emerald-500/50">
-            <p className="text-emerald-400 font-bold mb-2">Suas Vitórias</p>
+          <div className={`
+            p-6 rounded-2xl border-2
+            ${won 
+              ? 'bg-emerald-500/10 border-emerald-500/50' 
+              : draw 
+                ? 'bg-yellow-500/10 border-yellow-500/50'
+                : 'bg-zinc-800/50 border-zinc-700/50'}
+          `}>
+            <p className={`
+              font-bold mb-2
+              ${won ? 'text-emerald-400' : draw ? 'text-yellow-400' : 'text-zinc-400'}
+            `}>
+              Suas Vitórias
+            </p>
             <p className="text-5xl font-black text-white">{finalStats.playerWins}</p>
             <p className="text-sm text-zinc-500 mt-2">de 3 rounds</p>
           </div>
-          <div className="p-6 bg-red-500/10 rounded-2xl border-2 border-red-500/50">
-            <p className="text-red-400 font-bold mb-2">Vitórias Máquina</p>
+          <div className={`
+            p-6 rounded-2xl border-2
+            ${lost 
+              ? 'bg-red-500/10 border-red-500/50' 
+              : draw 
+                ? 'bg-yellow-500/10 border-yellow-500/50'
+                : 'bg-zinc-800/50 border-zinc-700/50'}
+          `}>
+            <p className={`
+              font-bold mb-2
+              ${lost ? 'text-red-400' : draw ? 'text-yellow-400' : 'text-zinc-400'}
+            `}>
+              Vitórias Máquina
+            </p>
             <p className="text-5xl font-black text-white">{finalStats.machineWins}</p>
             <p className="text-sm text-zinc-500 mt-2">de 3 rounds</p>
           </div>
         </div>
+
+        {/* Cards dos 3 Pokémon de cada lado no empate */}
+        {draw && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="space-y-4"
+          >
+            <p className="text-zinc-400">Time que batalhou:</p>
+            <div className="flex justify-center gap-4 flex-wrap">
+              {team.player.map((p, i) => (
+                <motion.div
+                  key={p.id}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.4 + i * 0.1 }}
+                  className="relative"
+                >
+                  <img
+                    src={pokemonService.getImageUrl(p.id)}
+                    alt={p.name}
+                    className="w-16 h-16 object-contain bg-zinc-800/50 rounded-xl p-2 border border-zinc-700"
+                  />
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center text-xs font-bold text-zinc-900">
+                    =
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         <div className="flex justify-center gap-4">
           <button
@@ -502,10 +574,12 @@ export default function BattlePage() {
           </button>
           <a
             href="/pokemon"
-            className="
-              px-8 py-4 bg-emerald-500 text-white font-bold rounded-full
-              hover:bg-emerald-600 transition-all duration-300
-            "
+            className={`
+              px-8 py-4 font-bold rounded-full transition-all duration-300
+              ${draw 
+                ? 'bg-yellow-500 text-zinc-900 hover:bg-yellow-400' 
+                : 'bg-emerald-500 text-white hover:bg-emerald-600'}
+            `}
           >
             Ver Pokémons
           </a>

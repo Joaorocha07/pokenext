@@ -26,6 +26,7 @@ interface BattleCardProps {
   disabled?: boolean
   hideFainted?: boolean
   showDamage?: boolean
+  isDraw?: boolean // NOVO: Indica se é empate
 }
 
 export function BattleCard({
@@ -37,6 +38,7 @@ export function BattleCard({
   onClick,
   disabled = false,
   hideFainted = false,
+  isDraw = false, // NOVO
 }: BattleCardProps) {
   const hpPercent = Math.max(0, (pokemon.currentHp / pokemon.maxHp) * 100)
   const isFainted = pokemon.currentHp <= 0
@@ -49,8 +51,9 @@ export function BattleCard({
   const isTypeRevealed = isFullyRevealed || pokemon.revealed?.type
   const isStatsRevealed = isFullyRevealed || pokemon.revealed?.stats
 
-  // NOVO: Durante a batalha, mostra HP mínimo visual mesmo se for 0
-  const displayHpPercent = hideFainted && isFainted ? 5 : hpPercent
+  // Durante a batalha, mostra HP mínimo visual mesmo se for 0
+  const displayHpPercent = hideFainted && 
+    isFainted ? (isDraw ? 15 : 5) : hpPercent
   const showFaintedOverlay = isFainted && !hideFainted
 
   return (
@@ -70,7 +73,8 @@ export function BattleCard({
         }
         ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         ${isFainted && !hideFainted ? 'grayscale opacity-60' : ''}
-        ${isFainted && hideFainted ? 'opacity-90' : ''} // Durante batalha mantém opacidade normal
+        ${isFainted && hideFainted ? 'opacity-90' : ''}
+        ${isDraw && isFainted ? 'border-yellow-500/50 bg-yellow-500/10' : ''} // Borda amarela no empate
       `}
     >
       {/* Imagem do Pokémon */}
@@ -90,16 +94,19 @@ export function BattleCard({
                 alt={pokemon.name}
                 className={`
                   w-32 h-32 object-contain drop-shadow-2xl
-                  ${isFainted && hideFainted ? 'brightness-75' : ''} // Escurece levemente se desmaiado escondido
+                  ${isFainted && hideFainted ? 'brightness-75' : ''}
                 `}
               />
               
-              {/* NOVO: Efeito de "critico" quando esconde desmaio */}
+              {/* Efeito de "critico" ou empate quando esconde desmaio */}
               {isFainted && hideFainted && (
                 <motion.div
                   animate={{ opacity: [0.3, 0.6, 0.3] }}
                   transition={{ duration: 2, repeat: Infinity }}
-                  className="absolute inset-0 bg-red-900/20 rounded-full blur-xl"
+                  className={`
+                    absolute inset-0 rounded-full blur-xl
+                    ${isDraw ? 'bg-yellow-900/30' : 'bg-red-900/20'}
+                  `}
                 />
               )}
             </motion.div>
@@ -161,6 +168,7 @@ export function BattleCard({
                 text-lg font-bold capitalize
                 ${isPlayer ? 'text-emerald-400' : 'text-red-400'}
                 ${isFainted && hideFainted ? 'opacity-70' : ''}
+                ${isDraw && isFainted ? 'text-yellow-400' : ''} // Nome amarelo no empate
               `}
             >
               {pokemon.name}
@@ -267,25 +275,28 @@ export function BattleCard({
         </div>
       )}
 
-      {/* Barra de HP - MODIFICADA para esconder desmaio durante batalha */}
+      {/* Barra de HP */}
       {showHp && (
         <div className="mt-4">
           <div className="flex justify-between text-xs mb-1">
             <span className={isPlayer ? 'text-emerald-400' : 'text-red-400'}>HP</span>
             <span className={`
               text-zinc-400
-              ${isFainted && hideFainted ? 'opacity-0' : ''} // Esconde texto "0/XX" durante batalha
+              ${isFainted && hideFainted ? 'opacity-0' : ''}
             `}>
               {isFullyRevealed || isPlayer ? `${pokemon.currentHp}/${pokemon.maxHp}` : '???'}
             </span>
-            {/* NOVO: Mostra "???" quando esconde desmaio */}
+            {/* Mostra "???" ou "EMPATE" quando esconde desmaio */}
             {isFainted && hideFainted && (
               <motion.span 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="text-red-500 font-bold"
+                className={`
+                  font-bold
+                  ${isDraw ? 'text-yellow-400' : 'text-red-500'}
+                `}
               >
-                ???
+                {isDraw ? '🤝 EMPATE' : '???'}
               </motion.span>
             )}
           </div>
@@ -297,7 +308,9 @@ export function BattleCard({
               className={`
                 h-full rounded-full relative
                 ${isFainted && hideFainted 
-                  ? 'bg-linear-to-r from-red-900 to-red-700 animate-pulse' // Barra vermelha escura pulsante
+                  ? isDraw
+                    ? 'bg-linear-to-r from-yellow-700 to-yellow-500 animate-pulse' // Amarelo no empate
+                    : 'bg-linear-to-r from-red-900 to-red-700 animate-pulse'
                   : hpPercent > 50 
                     ? 'bg-linear-to-r from-emerald-500 to-emerald-400' 
                     : hpPercent > 20 
@@ -307,11 +320,19 @@ export function BattleCard({
               `}
             >
               {/* Efeito de perigo quando esconde desmaio */}
-              {isFainted && hideFainted && (
+              {isFainted && hideFainted && !isDraw && (
                 <motion.div
                   animate={{ x: [-20, 20, -20] }}
                   transition={{ duration: 0.2, repeat: Infinity }}
                   className="absolute inset-0 bg-white/10"
+                />
+              )}
+              {/* Efeito de empate */}
+              {isFainted && hideFainted && isDraw && (
+                <motion.div
+                  animate={{ opacity: [0.3, 0.8, 0.3] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                  className="absolute inset-0 bg-yellow-400/20"
                 />
               )}
             </motion.div>
@@ -319,7 +340,7 @@ export function BattleCard({
         </div>
       )}
 
-      {/* Indicador de desmaiado - AGORA CONDICIONAL */}
+      {/* Indicador de desmaiado */}
       <AnimatePresence>
         {showFaintedOverlay && (
           <motion.div 
@@ -334,21 +355,34 @@ export function BattleCard({
               transition={{ duration: 0.5 }}
               className="text-5xl mb-2"
             >
-              💀
+              {isDraw ? '🤝' : '💀'}
             </motion.span>
-            <p className="text-zinc-400 font-bold uppercase tracking-wider">Desmaiou</p>
+            <p className="text-zinc-400 font-bold uppercase tracking-wider">
+              {isDraw ? 'Empate' : 'Desmaiou'}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* NOVO: Indicador sutil de "critico" quando esconde desmaio */}
+      {/* Indicador de "critico" ou empate quando esconde desmaio */}
       {isFainted && hideFainted && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="absolute top-2 right-2 px-2 py-1 bg-red-900/50 border border-red-500/50 rounded-full"
+          className={`
+            absolute top-2 right-2 px-2 py-1 border rounded-full
+            ${isDraw 
+              ? 'bg-yellow-900/50 border-yellow-500/50' 
+              : 'bg-red-900/50 border-red-500/50'
+            }
+          `}
         >
-          <span className="text-red-400 text-xs font-bold animate-pulse">⚠ CRÍTICO</span>
+          <span className={`
+            text-xs font-bold animate-pulse
+            ${isDraw ? 'text-yellow-400' : 'text-red-400'}
+          `}>
+            {isDraw ? '🤝 EMPATE' : '⚠ CRÍTICO'}
+          </span>
         </motion.div>
       )}
 
