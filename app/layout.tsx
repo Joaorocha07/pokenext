@@ -5,6 +5,8 @@ import {
   Geist_Mono 
 } from "next/font/google"
 
+import { Analytics } from "@vercel/analytics/next"
+
 import type { Metadata } from "next"
 
 const geistSans = Geist({
@@ -37,6 +39,7 @@ export default function RootLayout({
         className="min-h-full flex flex-col"
         suppressHydrationWarning
       >
+        <Analytics />
         {children}
       </body>
     </html>
