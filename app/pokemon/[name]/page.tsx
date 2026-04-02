@@ -37,34 +37,27 @@ export async function generateMetadata({
   try {
     pokemon = await pokemonService.getByIdOrName(name.toLowerCase())
   } catch {
-    // Se não encontrar, retorna metadata padrão
     return {
       title: 'Pokémon não encontrado | PokeNext',
       description: 'O Pokémon que você procura não foi encontrado na nossa Pokédex.'
     }
   }
 
-  // Formata o nome: pikachu → Pikachu
   const formattedName = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1)
   
-  // Extrai tipos para a descrição
   const types = pokemon.types.map(t => t.type.name).join(', ')
   
-  // Extrai stats principais
   const hp = pokemon.stats.find(s => s.stat.name === 'hp')?.base_stat || 0
   const attack = pokemon.stats.find(s => s.stat.name === 'attack')?.base_stat || 0
   const defense = pokemon.stats.find(s => s.stat.name === 'defense')?.base_stat || 0
 
   return {
-    // Título otimizado com keywords
     title: `${formattedName} - Stats, Tipos e Fraquezas | PokeNext`,
     
-    // Descrição rica e detalhada (150-160 caracteres ideal)
     description: `${formattedName} é um Pokémon do tipo ${types}. Stats: HP ${hp}, Ataque ${attack}, Defesa ${defense}. Veja evoluções, habilidades, moveset e fraquezas na PokeNext.`,
     
-    // Open Graph para redes sociais
     openGraph: {
-      title: `${formattedName} - Pokédex Completa | PokeNext`,
+      title: `${formattedName} - Stats, Tipos, Fraquezas e Evoluções | PokeNext Pokédex`,
       description: `Descubra tudo sobre ${formattedName}. Tipo ${types}, stats base, evoluções, habilidades e melhores movesets para batalhas.`,
       url: `https://pokenextweb.vercel.app/pokemon/${pokemon.name}`,
       siteName: 'PokeNext',
@@ -80,7 +73,6 @@ export async function generateMetadata({
       ]
     },
     
-    // Twitter Cards
     twitter: {
       card: 'summary_large_image',
       title: `${formattedName} - Pokédex PokeNext`,
@@ -92,7 +84,6 @@ export async function generateMetadata({
       canonical: `https://pokenextweb.vercel.app/pokemon/${pokemon.name}`
     },
     
-    // Keywords relacionadas (Google não usa meta keywords, mas outros sim)
     keywords: [
       pokemon.name,
       `${pokemon.name} pokemon`,
