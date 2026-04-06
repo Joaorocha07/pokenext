@@ -22,11 +22,19 @@ export function LoadingSpinner({ text, progress }: LoadingSpinnerProps) {
       />
 
       {text && (
-        <p className="mt-6 text-sm text-zinc-500 dark:text-zinc-400 text-center whitespace-nowrap animate-pulse">
+        <p className="
+          mt-6 
+          text-sm md:text-base 
+          text-zinc-500 dark:text-zinc-400 
+          text-center 
+          whitespace-normal wrap-break-word
+          px-4 
+          animate-pulse
+        ">
           {text}
         </p>
       )}
-
+      
       {progress !== undefined && (
         <div className="w-72 h-4 bg-zinc-200 dark:bg-zinc-700 rounded-full mt-6 overflow-hidden shadow-inner">
           <div 
